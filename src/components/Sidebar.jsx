@@ -20,7 +20,7 @@ const Sidebar = () => {
     { name: 'Laporan Keuangan', icon: <FileText size={20} />, path: '/laporan' },
   ];
 
-  // 3. Menu Khusus Kasir (Sesuai dokumen operasional)
+  // 3. Menu Khusus Kasir
   const menuKasir = [
     { name: 'Dashboard Kasir', icon: <LayoutDashboard size={20} />, path: '/dashboardKasir' },
     { name: 'Transaksi Baru', icon: <ShoppingCart size={20} />, path: '/pos' },

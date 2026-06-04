@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Coffee, Milk, Package } from 'lucide-react';
+import { TrendingUp, TrendingDown, Coffee, Milk } from 'lucide-react';
 
 const DashboardOwner = () => {
   return (
@@ -60,10 +60,10 @@ const DashboardOwner = () => {
           </div>
         </div>
 
-        {/* KOLOM 2: RINGKASAN KEUANGAN (Dibagi Atas Bawah) */}
+        {/* KOLOM 2: RINGKASAN KEUANGAN */}
         <div className="flex flex-col gap-6">
           
-          {/* Card Pendapatan (Baru) */}
+          {/* Card Pendapatan */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex-1 flex flex-col justify-center relative overflow-hidden">
             <div className="flex justify-between items-start mb-2 z-10">
               <h3 className="font-bold text-gray-800">Pendapatan</h3>
@@ -72,11 +72,10 @@ const DashboardOwner = () => {
               </span>
             </div>
             <h2 className="text-3xl font-bold text-gray-900 z-10">Rp 45.2Jt</h2>
-            {/* Hiasan Background */}
             <div className="absolute -bottom-6 -right-4 w-24 h-24 bg-green-50 rounded-full blur-2xl"></div>
           </div>
 
-          {/* Card Pengeluaran (Diperbarui) */}
+          {/* Card Pengeluaran */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex-1 flex flex-col justify-center relative overflow-hidden">
             <div className="flex justify-between items-start mb-2 z-10">
               <h3 className="font-bold text-gray-800">Pengeluaran</h3>
@@ -86,7 +85,6 @@ const DashboardOwner = () => {
             </div>
             <h2 className="text-3xl font-bold text-gray-900 z-10 mb-4">Rp 32.8Jt</h2>
             
-            {/* Progress Bar Pengeluaran Terbesar */}
             <div className="w-full z-10">
               <div className="flex justify-between text-[10px] text-gray-400 mb-1.5 font-medium">
                 <span>Biji Kopi</span>
@@ -96,7 +94,6 @@ const DashboardOwner = () => {
                 <div className="h-full bg-blue-500 rounded-full" style={{ width: '40%' }}></div>
               </div>
             </div>
-            {/* Hiasan Background */}
             <div className="absolute -bottom-6 -right-4 w-24 h-24 bg-red-50 rounded-full blur-2xl"></div>
           </div>
 
@@ -132,42 +129,53 @@ const DashboardOwner = () => {
 
       </div>
 
-      {/* BOTTOM CHART: Aktivitas Transaksi (Pill Chart) */}
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 relative">
+      {/* BOTTOM CHART: Tren Pendapatan (Area Chart SVG) */}
+      <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 relative">
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Aktivitas Transaksi</h3>
-            <p className="text-sm text-gray-400 mt-1">Kepadatan pengunjung minggu ini</p>
+            <h3 className="text-xl font-bold text-gray-900">Tren Pendapatan</h3>
+            <p className="text-sm text-gray-400 mt-1">Grafik pergerakan omzet minggu ini</p>
           </div>
           <div className="w-10 h-10 bg-green-50 text-[#005432] rounded-xl flex items-center justify-center">
-            <Package size={20} />
+            <TrendingUp size={20} />
           </div>
         </div>
 
-        {/* Grafik Batang Vertikal Kapsul */}
-        <div className="flex justify-between items-end h-48 px-4 md:px-12">
-          {/* Data Array untuk menyusun grafik kapsul */}
-          {[
-            { day: 'S', height: '60%', color: 'bg-green-300' },
-            { day: 'M', height: '40%', color: 'bg-green-300' },
-            { day: 'T', height: '15%', color: 'bg-green-300' },
-            { day: 'W', height: '85%', color: 'bg-[#005432]' }, // Hari tersibuk
-            { day: 'T', height: '25%', color: 'bg-green-300' },
-            { day: 'F', height: '55%', color: 'bg-green-300' },
-            { day: 'S', height: '50%', color: 'bg-green-300' },
-          ].map((item, index) => (
-            <div key={index} className="flex flex-col items-center gap-4">
-              {/* Background Kapsul */}
-              <div className="w-8 md:w-12 h-32 bg-gray-100 rounded-full flex flex-col justify-end overflow-hidden">
-                {/* Isi Kapsul */}
-                <div 
-                  className={`w-full rounded-full transition-all duration-1000 ease-out ${item.color}`} 
-                  style={{ height: item.height }}
-                ></div>
-              </div>
-              <span className="text-sm font-bold text-gray-400">{item.day}</span>
-            </div>
-          ))}
+        <div className="w-full h-56 relative border-b border-l border-gray-100 pb-2 pl-2 md:ml-6 md:w-[calc(100%-2rem)]">
+          {/* Label Sumbu Y */}
+          <div className="absolute -left-12 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-400 text-right pr-2">
+            <span>Rp 40Jt</span>
+            <span>Rp 30Jt</span>
+            <span>Rp 20Jt</span>
+            <span>Rp 10Jt</span>
+            <span>0p</span>
+          </div>
+
+          {/* Label Sumbu X */}
+          <div className="absolute -bottom-7 left-0 right-0 flex justify-between text-xs text-gray-400 px-2">
+            <span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span>
+          </div>
+
+          {/* Garis Horizontal Bantuan */}
+          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+            <div className="border-b border-gray-50 h-full"></div>
+            <div className="border-b border-gray-50 h-full"></div>
+            <div className="border-b border-gray-50 h-full"></div>
+            <div className="border-b border-gray-50 h-full"></div>
+          </div>
+
+          {/* SVG Grafik */}
+          <svg viewBox="0 0 100 40" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+            {/* Grafik Kuning (Pendapatan Shift Siang) */}
+            <path d="M0,40 L0,20 Q15,30 30,25 T50,5 T70,25 T100,20 L100,40 Z" fill="#fef3c7" opacity="0.6" />
+            <path d="M0,20 Q15,30 30,25 T50,5 T70,25 T100,20" fill="none" stroke="#f59e0b" strokeWidth="0.8" />
+            <circle cx="50" cy="5" r="1.5" fill="white" stroke="#f59e0b" strokeWidth="0.5" />
+            
+            {/* Grafik Hijau (Pendapatan Shift Malam) */}
+            <path d="M0,40 L0,35 Q15,20 30,25 T50,25 T75,10 T100,25 L100,40 Z" fill="#d1fae5" opacity="0.7" />
+            <path d="M0,35 Q15,20 30,25 T50,25 T75,10 T100,25" fill="none" stroke="#10b981" strokeWidth="0.8" />
+            <circle cx="50" cy="25" r="1.5" fill="white" stroke="#10b981" strokeWidth="0.5" />
+          </svg>
         </div>
       </div>
 
