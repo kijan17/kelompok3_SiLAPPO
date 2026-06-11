@@ -1,267 +1,121 @@
-import React, { useState } from 'react';
-import { Printer, Download, TrendingUp, DollarSign, Receipt, Coffee, Minus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Printer, DollarSign, Receipt, Coffee } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell } from 'recharts';
 
-const Laporan = () => {
-  // Data dummy untuk tabel rekapitulasi shift
-  const [shiftList] = useState([
-    {
-      id: 'Shift-001',
-      kasir: 'Nadine Putri Aisyah',
-      foto: 'https://ui-avatars.com/api/?name=Nadine+Putri&background=F3F4F6',
-      buka: '08:00 - 16:00',
-      tutup: '16:00 - 06:00',
-      modal: 'Rp 1.0Jt',
-      penjualan: 'Rp 6.8Jt',
-      status: 'Tutup'
-    },
-    {
-      id: 'Shift-002',
-      kasir: 'Raditya Kusuma Putra',
-      foto: 'https://ui-avatars.com/api/?name=Raditya+Kusuma&background=F3F4F6',
-      buka: '16:00 - 00:00',
-      tutup: '16:00 - 00:00',
-      modal: 'Rp 1.0Jt',
-      penjualan: 'Rp 7.4Jt',
-      status: 'Tutup'
-    },
-    {
-      id: 'Shift-003',
-      kasir: 'Nadine Putri Aisyah',
-      foto: 'https://ui-avatars.com/api/?name=Nadine+Putri&background=F3F4F6',
-      buka: '08:00 - 16:00',
-      tutup: '-',
-      modal: 'Rp 1.0Jt',
-      penjualan: 'Rp 2.4Jt (1 jam)',
-      status: 'Sedang Jaga'
-    }
-  ]);
+const LaporanKeuangan = () => {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/transactions')
+      .then(res => res.json())
+      .then(res => setData(res))
+      .catch(err => console.error("Error fetching data:", err));
+  }, []);
+
+  if (!data) return <div className="p-10 text-center font-bold text-[#005432]">Memuat data laporan...</div>;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-sans">
+    <div className="space-y-6 animate-in fade-in duration-500 font-sans min-h-screen pb-10">
       
-      {/* HEADER & FILTER ACTION */}
+      {/* HEADER */}
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Selamat Datang, <span className="text-[#005432]">Owner</span></h1>
-          <p className="text-gray-500 mt-1">Halaman Laporan Keuangan & Analisis Bisnis</p>
+          <p className="text-gray-500 mt-1">Halaman Laporan Keuangan & Analisis Bisnis (Real-Time)</p>
         </div>
-        
-        <div className="flex gap-4 items-center">
-          {/* Toggle Filter Bulan/Minggu */}
-          <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm text-sm">
-            <button className="px-4 py-1.5 text-gray-500 hover:bg-gray-50 rounded-md">Hari Ini</button>
-            <button className="px-4 py-1.5 text-gray-500 hover:bg-gray-50 rounded-md">Minggu Ini</button>
-            <button className="px-4 py-1.5 bg-green-100 text-[#005432] font-bold rounded-md">Bulan Ini</button>
-            <button className="px-4 py-1.5 text-gray-500 hover:bg-gray-50 rounded-md">Kustom ⌄</button>
-          </div>
-          
-          <button className="flex items-center gap-2 bg-[#005432] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#004225] transition-all shadow-sm">
-            <Printer size={16} /> Cetak Laporan
-          </button>
-          <button className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-medium hover:bg-red-100 transition-all shadow-sm">
-            <Download size={16} /> Ekspor PDF
-          </button>
-        </div>
+        <button className="flex items-center gap-2 bg-[#005432] text-white px-5 py-2 rounded-lg font-bold hover:bg-green-900 shadow-sm text-sm">
+          <Printer size={16} /> Cetak Laporan
+        </button>
       </div>
 
-      {/* KPI CARDS */}
+      {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600">
-            <DollarSign size={24} />
+        {[
+          { title: 'Total Pendapatan', val: data.summary.total_pendapatan, icon: DollarSign, color: 'text-yellow-600', bg: 'bg-yellow-100' },
+          { title: 'Total Transaksi', val: `${data.summary.total_transaksi} Nota`, icon: Receipt, color: 'text-gray-600', bg: 'bg-gray-100' },
+          { title: 'Rata-rata Penjualan', val: data.summary.rata_rata, icon: Coffee, color: 'text-purple-500', bg: 'bg-purple-100' }
+        ].map((item, i) => (
+          <div key={i} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-5">
+            <div className={`w-14 h-14 rounded-2xl ${item.bg} ${item.color} flex items-center justify-center`}><item.icon size={28} /></div>
+            <div><p className="text-xs font-bold text-gray-500 mb-1">{item.title}</p><h3 className="text-2xl font-black">{item.val}</h3></div>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-gray-700">Total Pendapatan (Bulan Ini)</p>
-            <div className="flex items-end gap-3 mt-1">
-              <h2 className="text-2xl font-bold text-gray-900">Rp 14.2Jt</h2>
-              <span className="flex items-center gap-1 text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-md mb-1">
-                <TrendingUp size={12} /> +12% vs. Bulan Lalu
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600">
-            <Receipt size={24} />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-gray-700">Total Transaksi</p>
-            <div className="flex items-end gap-3 mt-1 justify-between">
-              <div className="flex items-end gap-3">
-                <h2 className="text-2xl font-bold text-gray-900">230</h2>
-                <span className="flex items-center gap-1 text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-md mb-1">
-                  <TrendingUp size={12} /> +5%
-                </span>
-              </div>
-              <span className="text-gray-400 text-sm flex items-center mb-1"><Minus size={14}/> stable</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
-            <Coffee size={24} />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-gray-700">Rata-rata Nilai Transaksi</p>
-            <div className="flex items-end gap-3 mt-1 justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Rp 61rb</h2>
-              <span className="text-gray-400 text-sm flex items-center mb-1"><Minus size={14}/> stable</span>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* CHARTS SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Area Chart (Menggunakan murni SVG agar tidak error) */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="font-bold text-gray-800 mb-6">Tren Pendapatan (Minggu Ini)</h3>
-          <div className="w-full h-48 relative border-b border-l border-gray-100 pb-2 pl-2">
-            
-            {/* Label Sumbu Y */}
-            <div className="absolute -left-10 top-0 bottom-0 flex flex-col justify-between text-[10px] text-gray-400 text-right pr-2">
-              <span>Rp 40Jt</span>
-              <span>Rp 30Jt</span>
-              <span>Rp 20Jt</span>
-              <span>Rp 10Jt</span>
-              <span>0p</span>
-            </div>
-
-            {/* Label Sumbu X */}
-            <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-[10px] text-gray-400 px-2">
-              <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-            </div>
-
-            {/* Garis Horizontal Bantuan */}
-            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-              <div className="border-b border-gray-50 h-full"></div>
-              <div className="border-b border-gray-50 h-full"></div>
-              <div className="border-b border-gray-50 h-full"></div>
-              <div className="border-b border-gray-50 h-full"></div>
-            </div>
-
-            {/* SVG Grafik */}
-            <svg viewBox="0 0 100 40" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-              {/* Grafik Kuning (Pendapatan Shift Siang) */}
-              <path d="M0,40 L0,20 Q15,30 30,25 T50,5 T70,25 T100,20 L100,40 Z" fill="#fef3c7" opacity="0.6" />
-              <path d="M0,20 Q15,30 30,25 T50,5 T70,25 T100,20" fill="none" stroke="#f59e0b" strokeWidth="0.8" />
-              <circle cx="50" cy="5" r="1.5" fill="white" stroke="#f59e0b" strokeWidth="0.5" />
-              
-              {/* Grafik Hijau (Pendapatan Shift Malam) */}
-              <path d="M0,40 L0,35 Q15,20 30,25 T50,25 T75,10 T100,25 L100,40 Z" fill="#d1fae5" opacity="0.7" />
-              <path d="M0,35 Q15,20 30,25 T50,25 T75,10 T100,25" fill="none" stroke="#10b981" strokeWidth="0.8" />
-              <circle cx="50" cy="25" r="1.5" fill="white" stroke="#10b981" strokeWidth="0.5" />
-            </svg>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* LINE CHART */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm h-[320px]">
+          <h3 className="font-bold text-gray-800 text-sm mb-6">Tren Pendapatan Harian</h3>
+          <ResponsiveContainer width="100%" height="80%">
+            <AreaChart data={data.chart_data}>
+              <defs><linearGradient id="color" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+              <XAxis dataKey="name" tick={{fontSize: 10}} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={(v) => `Rp ${v}Rb`} tick={{fontSize: 10}} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(v) => [`Rp ${v}.000`, 'Pendapatan']} />
+              <Area type="monotone" dataKey="current" stroke="#10b981" fill="url(#color)" strokeWidth={3} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Donut Chart (Menggunakan murni CSS Conic Gradient) */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-          <h3 className="font-bold text-gray-800 mb-6">Analisis Kategori Produk Terlaris (Bulan Ini)</h3>
-          <div className="flex items-center justify-around flex-1">
-            
-            {/* Lingkaran Donat */}
-            <div className="relative w-40 h-40 rounded-full flex items-center justify-center" 
-                 style={{
-                   background: `conic-gradient(#6ee7b7 0% 40%, #fde68a 40% 70%, #fca5a5 70% 90%, #c4b5fd 90% 100%)`
-                 }}>
-              <div className="absolute w-20 h-20 bg-white rounded-full"></div>
-              {/* Label Persentase Mengambang */}
-              <span className="absolute top-4 right-4 text-[10px] font-bold text-gray-700">40%</span>
-              <span className="absolute bottom-4 left-6 text-[10px] font-bold text-gray-700">30%</span>
-              <span className="absolute top-12 left-4 text-[10px] font-bold text-gray-700">20%</span>
-              <span className="absolute top-2 right-16 text-[10px] font-bold text-gray-700">10%</span>
-            </div>
-
-            {/* Legend Samping */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-8">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#6ee7b7] rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">coffee</span>
-                </div>
-                <span className="font-bold text-gray-800">401</span>
+        {/* PIE CHART - FIXED HEIGHT & CENTERED */}
+        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col justify-between h-[320px]">
+          <h3 className="font-bold text-gray-800 text-sm">Kategori Terlaris</h3>
+          <div className="flex-1 flex items-center justify-center relative h-[150px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={data.pie_data} dataKey="value" innerRadius={45} outerRadius={70} paddingAngle={5}>
+                  {data.pie_data.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Pie>
+                <Tooltip formatter={(v) => [`${v} item`, 'Terjual']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2 mt-2 px-2">
+            {data.pie_data.map((item, i) => (
+              <div key={i} className="flex justify-between text-[11px] font-bold text-gray-500">
+                <span className="capitalize">{item.name}</span>
+                <span className="text-gray-900">{item.value} Item</span>
               </div>
-              <div className="flex items-center justify-between gap-8">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#fde68a] rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">milk</span>
-                </div>
-                <span className="font-bold text-gray-800">30</span>
-              </div>
-              <div className="flex items-center justify-between gap-8">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#fca5a5] rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">food</span>
-                </div>
-                <span className="font-bold text-gray-800">20</span>
-              </div>
-              <div className="flex items-center justify-between gap-8">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#c4b5fd] rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">merchandise</span>
-                </div>
-                <span className="font-bold text-gray-800">10</span>
-              </div>
-            </div>
-
+            ))}
           </div>
         </div>
       </div>
 
-      {/* TABLE REKAPITULASI */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-5 border-b border-gray-100">
-          <h3 className="font-bold text-gray-800">Rekapitulasi Shift Terakhir</h3>
-        </div>
+      {/* TABLE SECTION */}
+      <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-50 font-bold text-gray-800 text-sm">Rekapitulasi Transaksi Terakhir</div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 text-sm font-bold text-gray-700">
-                <th className="py-4 px-6 font-bold">ID Shift</th>
-                <th className="py-4 px-6 font-bold">Kasir Jaga</th>
-                <th className="py-4 px-6 font-bold">Buka</th>
-                <th className="py-4 px-6 font-bold">Tutup</th>
-                <th className="py-4 px-6 font-bold">Modal Awal</th>
-                <th className="py-4 px-6 font-bold">Total Penjualan</th>
-                <th className="py-4 px-6 font-bold text-center">Status</th>
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 text-[10px] text-gray-400 uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">ID Nota</th>
+                <th className="px-6 py-4">Kasir</th>
+                <th className="px-6 py-4">Waktu</th>
+                <th className="px-6 py-4">Total Penjualan</th>
+                <th className="px-6 py-4 text-center">Status</th>
               </tr>
             </thead>
-            <tbody className="text-sm text-gray-600 divide-y divide-gray-100">
-              {shiftList.map((shift, index) => (
-                <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="py-4 px-6 font-medium">{shift.id}</td>
-                  <td className="py-4 px-6 flex items-center gap-3">
-                    <img src={shift.foto} alt="Kasir" className="w-8 h-8 rounded-full border border-gray-200" />
-                    <span className="font-medium text-gray-800">{shift.kasir}</span>
+            <tbody className="text-sm">
+              {data.recent_transactions.map((row, i) => (
+                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 font-bold text-gray-700">{row.id}</td>
+                  <td className="px-6 py-4 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#005432] text-white flex items-center justify-center text-[10px] font-bold">{row.in}</div>
+                    <span className="font-bold">{row.name}</span>
                   </td>
-                  <td className="py-4 px-6">{shift.buka}</td>
-                  <td className="py-4 px-6">{shift.tutup}</td>
-                  <td className="py-4 px-6">{shift.modal}</td>
-                  <td className="py-4 px-6 font-medium">{shift.penjualan}</td>
-                  <td className="py-4 px-6">
-                    <div className="flex justify-center">
-                      <span className={`px-4 py-1.5 rounded-full text-xs font-bold border ${
-                        shift.status === 'Tutup' 
-                          ? 'bg-gray-100 text-gray-500 border-gray-200' 
-                          : 'bg-green-100 text-[#005432] border-green-200'
-                      }`}>
-                        {shift.status}
-                      </span>
-                    </div>
-                  </td>
+                  <td className="px-6 py-4 text-gray-500">{row.open} WIB</td>
+                  <td className="px-6 py-4 font-black text-[#005432]">{row.total}</td>
+                  <td className="px-6 py-4 text-center"><span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase">Berhasil</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-
     </div>
   );
 };
 
-export default Laporan;
+export default LaporanKeuangan;

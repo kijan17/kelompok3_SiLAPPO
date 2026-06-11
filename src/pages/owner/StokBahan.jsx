@@ -27,7 +27,9 @@ const StokBahan = () => {
   const fetchRestockHistory = () => {
     fetch('http://127.0.0.1:8000/api/restocks')
       .then(res => res.json())
-      .then(data => { if (data.success) setRestockHistory(data.data); });
+      .then(data => { 
+        console.log("Intip data pengeluaran dari Laravel:", data);
+        if (data.success) setRestockHistory(data.data); });
   };
 
   const openModal = (ingredient = null) => {
