@@ -6,24 +6,52 @@ import LappoLogo from '../../assets/LappoLogo.jpg';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // Fungsi untuk memproses login bohongan
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     
-    // Hilangkan spasi berlebih dan ubah semua huruf jadi kecil
-    const inputEmail = email.toLowerCase().trim();
+    const inputUsername = username.trim();
     
-    // Logika pembagian peran: Asalkan mengandung kata 'owner', masuk ke Dasbor Owner
-    if (inputEmail.includes('owner')) {
+    // 1. Jalur Khusus Owner (Bypass lokal agar owner tetap bisa masuk tanpa tabel khusus)
+    if (inputUsername.toLowerCase() === 'owner') {
       localStorage.setItem('role', 'owner');
+      localStorage.setItem('kasir_name', 'Owner Lappo');
       navigate('/dashboardOwner'); 
-    } else {
-      // Selain owner (termasuk kasir, admin, dsb), masuk ke Dasbor Kasir
-      localStorage.setItem('role', 'kasir');
-      navigate('/dashboardKasir'); 
+      return;
+    }
+
+    // 2. Jalur Login Kasir Nyata (Koneksi ke Database Laravel)
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          username: inputUsername,
+          password: password
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Simpan data kasir yang login ke localStorage agar dibaca oleh DashboardKasir.jsx
+        localStorage.setItem('role', 'kasir');
+        localStorage.setItem('kasir_name', data.data.nama_lengkap);
+        localStorage.setItem('kasir_id', data.data.id);
+        
+        alert(`Selamat datang, ${data.data.nama_lengkap}! Status Anda kini: Sedang Jaga.`);
+        navigate('/dashboardKasir'); 
+      } else {
+        alert("Gagal Login: " + data.message);
+      }
+    } catch (error) {
+      console.error("Error Login:", error);
+      alert("Tidak dapat terhubung ke server. Pastikan server Laravel sudah dinyalakan!");
     }
   };
 
@@ -52,16 +80,16 @@ const Login = () => {
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-6">
             
-            {/* Input Email */}
+            {/* Input Username */}
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">
-                Email
+                Username Kasir
               </label>
               <input
                 type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Masukkan Email Anda"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Masukkan Username Anda"
                 className="w-full px-4 py-3.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#005432] focus:ring-1 focus:ring-[#005432] transition-colors"
                 required
               />
@@ -96,7 +124,7 @@ const Login = () => {
 
           {/* Note kecil untuk pengujian */}
           <p className="text-xs text-center text-gray-400 mt-8">
-            *Ketik <b>owner</b> atau <b>kasir</b> di email untuk testing.
+            *Ketik <b>owner</b> untuk akses Owner, atau gunakan <b>Username Kasir</b> yang telah didaftarkan.
           </p>
         </div>
 

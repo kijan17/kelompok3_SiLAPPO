@@ -9,7 +9,9 @@ const KelolaKasir = () => {
   const [formData, setFormData] = useState({ 
     nama_lengkap: '', 
     id_staf: '', 
-    status: 'Aktif (Offline)' 
+    status: 'Aktif (Offline)',
+    username: '',
+    password: ''
   });
 
   // Ambil data saat halaman pertama kali dimuat
@@ -33,11 +35,19 @@ const KelolaKasir = () => {
       setFormData({ 
         nama_lengkap: kasir.nama_lengkap, 
         id_staf: kasir.id_staf, 
-        status: kasir.status 
+        status: kasir.status,
+        username: kasir.username || '',
+        password: '' // Dikosongkan saat edit agar password lama tidak tertimpa jika tidak diisi
       });
     } else {
       setEditingKasir(null);
-      setFormData({ nama_lengkap: '', id_staf: `LC-KSR-${String(kasirs.length + 1).padStart(3, '0')}`, status: 'Aktif (Offline)' });
+      setFormData({ 
+        nama_lengkap: '', 
+        id_staf: `LC-KSR-${String(kasirs.length + 1).padStart(3, '0')}`, 
+        status: 'Aktif (Offline)',
+        username: '',
+        password: ''
+      });
     }
     setIsModalOpen(true);
   };
@@ -61,8 +71,12 @@ const KelolaKasir = () => {
         setIsModalOpen(false); 
         fetchKasirs(); 
       } else {
-        alert("Gagal menyimpan: Cek apakah ID Staf sudah digunakan.");
+        alert("Gagal menyimpan: Cek apakah ID Staf/Username sudah digunakan.");
       }
+    })
+    .catch(err => {
+      console.error("Error:", err);
+      alert("Terjadi kesalahan koneksi ke server.");
     });
   };
 
@@ -77,6 +91,7 @@ const KelolaKasir = () => {
 
   // Fungsi Pembuat Inisial Nama (Misal: "Nadine Putri" -> "NP")
   const getInitials = (name) => {
+    if (!name) return "UK";
     const words = name.split(' ');
     if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
     return name.substring(0, 2).toUpperCase();
@@ -128,7 +143,10 @@ const KelolaKasir = () => {
                 <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center font-black text-gray-600">
                     {getInitials(item.nama_lengkap)}
                 </div>
-                <h3 className="font-bold text-gray-800">{item.nama_lengkap}</h3>
+                <div>
+                  <h3 className="font-bold text-gray-800">{item.nama_lengkap}</h3>
+                  <p className="text-xs text-gray-400">@{item.username}</p>
+                </div>
                 </div>
 
                 {/* Kolom 2: ID */}
@@ -209,20 +227,31 @@ const KelolaKasir = () => {
                 <button onClick={() => setIsModalOpen(false)} className="text-green-200 hover:text-white"><X size={24}/></button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-8 space-y-5">
+            <form onSubmit={handleSubmit} className="p-8 space-y-4">
               <div>
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Nama Lengkap</label>
-                  <input required value={formData.nama_lengkap} onChange={(e) => setFormData({...formData, nama_lengkap: e.target.value})} type="text" placeholder="Masukkan nama..." className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold text-gray-800 focus:ring-2 focus:ring-[#005432] outline-none" />
+                  <input required value={formData.nama_lengkap} onChange={(e) => setFormData({...formData, nama_lengkap: e.target.value})} type="text" placeholder="Masukkan nama..." className="w-full bg-gray-50 border-none rounded-xl p-3 font-bold text-gray-800 focus:ring-2 focus:ring-[#005432] outline-none" />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                   <div>
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Username</label>
+                      <input required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} type="text" placeholder="contoh: asya" className="w-full bg-gray-50 border-none rounded-xl p-3 font-bold text-gray-800 focus:ring-2 focus:ring-[#005432] outline-none" />
+                  </div>
+                  <div>
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Password</label>
+                      <input required={!editingKasir} value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} type="password" placeholder={editingKasir ? "(Kosongkan jika tetap)" : "Min. 6 karakter"} className="w-full bg-gray-50 border-none rounded-xl p-3 font-bold text-gray-800 focus:ring-2 focus:ring-[#005432] outline-none" />
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">ID Staf</label>
-                    <input required value={formData.id_staf} onChange={(e) => setFormData({...formData, id_staf: e.target.value})} type="text" placeholder="LC-KSR-XXX" className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold text-gray-800 focus:ring-2 focus:ring-[#005432] outline-none" />
+                    <input required value={formData.id_staf} onChange={(e) => setFormData({...formData, id_staf: e.target.value})} type="text" placeholder="LC-KSR-XXX" className="w-full bg-gray-50 border-none rounded-xl p-3 font-bold text-gray-800 focus:ring-2 focus:ring-[#005432] outline-none" />
                   </div>
                   <div>
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Status Aktif</label>
-                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold text-gray-800 focus:ring-2 focus:ring-[#005432] outline-none">
+                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="w-full bg-gray-50 border-none rounded-xl p-3 font-bold text-gray-800 focus:ring-2 focus:ring-[#005432] outline-none">
                         <option value="Aktif (Offline)">Aktif (Offline)</option>
                         <option value="Sedang Jaga">Sedang Jaga</option>
                         <option value="Nonaktif / Cuti">Nonaktif / Cuti</option>
@@ -230,7 +259,7 @@ const KelolaKasir = () => {
                   </div>
               </div>
               
-              <button type="submit" className="w-full bg-[#005432] text-white py-4 rounded-xl font-black shadow-lg hover:bg-green-900 transition-colors mt-4">
+              <button type="submit" className="w-full bg-[#005432] text-white py-4 rounded-xl font-black shadow-lg hover:bg-green-900 transition-colors mt-2">
                   <Save size={18} className="inline mr-2" /> Simpan Data Staf
               </button>
             </form>

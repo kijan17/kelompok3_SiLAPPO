@@ -4,8 +4,13 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaCh
 
 const LaporanKeuangan = () => {
   const [data, setData] = useState(null);
+  const [namaPengguna, setNamaPengguna] = useState('Owner');
 
   useEffect(() => {
+    // Tarik nama yang sedang login
+    const storedName = localStorage.getItem('kasir_name');
+    if (storedName) setNamaPengguna(storedName);
+
     fetch('http://127.0.0.1:8000/api/transactions')
       .then(res => res.json())
       .then(res => setData(res))
@@ -20,7 +25,7 @@ const LaporanKeuangan = () => {
       {/* HEADER */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Selamat Datang, <span className="text-[#005432]">Owner</span></h1>
+          <h1 className="text-3xl font-bold text-gray-900">Selamat Datang, <span className="text-[#005432]">{namaPengguna}</span></h1>
           <p className="text-gray-500 mt-1">Halaman Laporan Keuangan & Analisis Bisnis (Real-Time)</p>
         </div>
         <button className="flex items-center gap-2 bg-[#005432] text-white px-5 py-2 rounded-lg font-bold hover:bg-green-900 shadow-sm text-sm">
@@ -59,7 +64,7 @@ const LaporanKeuangan = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* PIE CHART - FIXED HEIGHT & CENTERED */}
+        {/* PIE CHART */}
         <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col justify-between h-[320px]">
           <h3 className="font-bold text-gray-800 text-sm">Kategori Terlaris</h3>
           <div className="flex-1 flex items-center justify-center relative h-[150px]">
@@ -102,7 +107,10 @@ const LaporanKeuangan = () => {
                 <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-bold text-gray-700">{row.id}</td>
                   <td className="px-6 py-4 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#005432] text-white flex items-center justify-center text-[10px] font-bold">{row.in}</div>
+                    {/* Inisial Kasir ditarik langsung dari nama (row.name) jika row.in tidak ada */}
+                    <div className="w-8 h-8 rounded-full bg-[#005432] text-white flex items-center justify-center text-[10px] font-bold">
+                      {row.name ? row.name.substring(0, 2).toUpperCase() : 'KS'}
+                    </div>
                     <span className="font-bold">{row.name}</span>
                   </td>
                   <td className="px-6 py-4 text-gray-500">{row.open} WIB</td>
