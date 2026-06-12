@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Package, Layers, Users, FileText, ShoppingCart, LogOut } from 'lucide-react';
 import LappoLogo from '../assets/LappoLogo.jpg'; 
@@ -7,11 +7,19 @@ const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 1. Ambil data sesi dari localStorage (Default ke 'kasir' jika kosong)
+  // STATE UNTUK ANIMASI MUNCUL
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    // Saat sidebar pertama kali dirender, nyalakan animasi masuknya!
+    setTimeout(() => {
+        setIsMounted(true);
+    }, 100);
+  }, []);
+
   const userRole = localStorage.getItem('role') || 'kasir';
   const isOwner = userRole === 'owner';
 
-  // 2. Menu Khusus Owner
   const menuOwner = [
     { name: 'Dashboard Owner', icon: <LayoutDashboard size={20} />, path: '/dashboardOwner' },
     { name: 'Katalog Produk', icon: <Package size={20} />, path: '/kelola-produk' },
@@ -20,23 +28,28 @@ const Sidebar = () => {
     { name: 'Laporan Keuangan', icon: <FileText size={20} />, path: '/laporan' },
   ];
 
-  // 3. Menu Khusus Kasir
   const menuKasir = [
     { name: 'Dashboard Kasir', icon: <LayoutDashboard size={20} />, path: '/dashboardKasir' },
     { name: 'Transaksi Baru', icon: <ShoppingCart size={20} />, path: '/pos' },
   ];
 
-  // 4. Tentukan menu mana yang dirender
   const activeMenus = isOwner ? menuOwner : menuKasir;
 
-  // 5. Fungsi Log Out untuk menghapus sesi
   const handleLogout = () => {
-    localStorage.removeItem('role'); // Hapus memori role
-    navigate('/login'); // Kembalikan ke halaman login
+    // Tambahkan efek mundur sedikit sebelum logout
+    setIsMounted(false);
+    setTimeout(() => {
+        localStorage.removeItem('role'); 
+        navigate('/login'); 
+    }, 300);
   };
 
   return (
-    <div className="w-64 bg-white border-r border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm font-sans z-50">
+    <div 
+      className={`w-64 bg-white border-r border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm font-sans z-50 transform transition-transform duration-700 ease-out ${
+        isMounted ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
       
       {/* AREA LOGO */}
       <div className="p-8 flex items-center gap-3">

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Coffee, Milk, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { useNavigate } from 'react-router-dom'; // <-- 1. IMPORT USENAVIGATE ASYA
+import { useNavigate } from 'react-router-dom'; 
 
 const DashboardOwner = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  const navigate = useNavigate(); // <-- 2. DEKLARASI NAVIGATE
+  // STATE ANIMASI
+  const [isContentMounted, setIsContentMounted] = useState(false);
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/dashboard/owner')
@@ -15,6 +17,11 @@ const DashboardOwner = () => {
       .then(res => {
         if (res.success) setData(res.data);
         setLoading(false);
+        
+        // JALANKAN ANIMASI SETELAH LOADING SELESAI
+        setTimeout(() => {
+            setIsContentMounted(true);
+        }, 100);
       })
       .catch(err => {
         console.error("Gagal load dashboard", err);
@@ -35,7 +42,12 @@ const DashboardOwner = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-sans relative min-h-screen pb-10 p-2">
+    // WRAPPER UTAMA DENGAN ANIMASI
+    <div 
+      className={`space-y-6 font-sans relative min-h-screen pb-10 p-2 transition-all duration-1000 ease-out transform ${
+        isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+      }`}
+    >
       
       {/* HEADER SECTION */}
       <div>

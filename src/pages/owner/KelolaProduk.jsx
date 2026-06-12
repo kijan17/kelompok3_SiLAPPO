@@ -3,15 +3,24 @@ import { Plus, Edit2, Coffee, Info, X, Save, Trash2, PlusCircle } from 'lucide-r
 
 const KelolaProduk = () => {
   const [products, setProducts] = useState([]);
-  const [allIngredients, setAllIngredients] = useState([]); // Master data bahan dari DB
+  const [allIngredients, setAllIngredients] = useState([]); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   
   const [formData, setFormData] = useState({ nama_produk: '', harga: '' });
-  const [selectedIngredients, setSelectedIngredients] = useState([]); // Resep yang sedang disusun
+  const [selectedIngredients, setSelectedIngredients] = useState([]); 
   const [tempIngredient, setTempIngredient] = useState({ id: '', qty: '' });
 
-  useEffect(() => { fetchProducts(); fetchIngredients(); }, []);
+  // STATE ANIMASI
+  const [isContentMounted, setIsContentMounted] = useState(false);
+
+  useEffect(() => { 
+    // JALANKAN ANIMASI SETELAH JEDA 100ms
+    setTimeout(() => { setIsContentMounted(true); }, 100);
+    
+    fetchProducts(); 
+    fetchIngredients(); 
+  }, []);
 
   const fetchProducts = () => {
     fetch('http://127.0.0.1:8000/api/products').then(res => res.json()).then(data => { if (data.success) setProducts(data.data); });
@@ -25,7 +34,6 @@ const KelolaProduk = () => {
     if (product) {
       setEditingProduct(product);
       setFormData({ nama_produk: product.nama_produk, harga: product.harga });
-      // Ambil resep yang sudah ada dari database
       const existingRecipe = product.ingredients.map(ing => ({
         id: ing.id,
         nama: ing.nama_bahan,
@@ -41,7 +49,6 @@ const KelolaProduk = () => {
     setIsModalOpen(true);
   };
 
-  // Tambah bahan ke daftar resep sementara
   const addIngredientToRecipe = () => {
     if (!tempIngredient.id || !tempIngredient.qty) return;
     const ing = allIngredients.find(i => i.id === parseInt(tempIngredient.id));
@@ -57,9 +64,7 @@ const KelolaProduk = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
-      // LANGKAH 1: SIMPAN ATAU UPDATE DATA PRODUK (NAMA & HARGA)
       const productUrl = editingProduct ? `http://127.0.0.1:8000/api/products/${editingProduct.id}` : 'http://127.0.0.1:8000/api/products';
       const productMethod = editingProduct ? 'PUT' : 'POST';
 
@@ -72,12 +77,7 @@ const KelolaProduk = () => {
       const productData = await productResponse.json();
 
       if (productData.success) {
-        // Ambil ID produk yang sedang diedit atau baru dibuat
-        // Pastikan backend Laravel return data produk di 'productData.data.id' jika tambah baru
         const productId = editingProduct ? editingProduct.id : productData.data.id;
-
-        // LANGKAH 2: SIMPAN RESEP KE ENDPOINT KHUSUS RESEP
-        // Ubah format data dari React (id, qty) agar sesuai dengan permintaan Laravel
         const formattedIngredients = selectedIngredients.map(ing => ({
           ingredient_id: ing.id,
           jumlah_dibutuhkan: ing.qty
@@ -94,7 +94,7 @@ const KelolaProduk = () => {
         if (recipeData.success) {
           alert("Mantap! Menu & Resep berhasil disimpan.");
           setIsModalOpen(false);
-          fetchProducts(); // Refresh data di layar
+          fetchProducts(); 
         } else {
           alert("Menu tersimpan, tapi resep gagal: " + recipeData.message);
         }
@@ -108,31 +108,73 @@ const KelolaProduk = () => {
   };
 
   return (
-    <div className="relative min-h-screen space-y-8 animate-in fade-in duration-500">
+    <div 
+      className={`relative min-h-screen space-y-8 p-2 font-sans transition-all duration-1000 ease-out transform ${
+        isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+      }`}
+    >
+      {/* HEADER */}
       <div className="flex justify-between items-end">
-        <div><h1 className="text-3xl font-bold text-gray-800">Kelola Produk</h1><p className="text-gray-500 mt-1">Manajemen Menu & Resep Otomatis</p></div>
-        <button onClick={() => openModal()} className="flex items-center gap-2 bg-[#005432] text-white px-5 py-3 rounded-xl font-bold hover:scale-105 transition-all shadow-lg"><Plus size={20} /> Tambah Produk</button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Katalog Produk</h1>
+          <p className="text-gray-500 mt-1">Manajemen Menu & Resep Otomatis</p>
+        </div>
+        <button onClick={() => openModal()} className="flex items-center gap-2 bg-[#005432] text-white px-5 py-3 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg hover:shadow-green-900/30">
+          <Plus size={20} /> Tambah Produk
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* GRID KARTU PRODUK ALA RESTORAN */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {products.map((product) => (
-          <div key={product.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col relative group hover:shadow-xl transition-all duration-300">
-            <div className="flex gap-4 mb-3">
-              <div className="w-20 h-20 bg-gray-50 rounded-xl flex items-center justify-center text-gray-300 flex-shrink-0 group-hover:bg-green-50 transition-colors"><Coffee size={35} strokeWidth={1.5} /></div>
-              <div className="flex-1"><h3 className="font-bold text-gray-800 leading-tight">{product.nama_produk}</h3><p className="text-[11px] text-gray-400 mt-1">Lappo Signature Series</p></div>
+          <div key={product.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 flex flex-col relative group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+            
+            {/* PLACEHOLDER GAMBAR BESAR */}
+            <div className="w-full h-48 bg-gray-100 relative flex items-center justify-center group-hover:bg-green-50 transition-colors">
+              <Coffee size={64} className="text-gray-300 group-hover:text-[#005432] transition-colors opacity-50" strokeWidth={1} />
+              
+              {/* BADGE TERSEDIA (Mengambang) */}
+              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Tersedia</span>
+              </div>
             </div>
-            <div className="mb-4 bg-green-50/50 p-2.5 rounded-lg border border-green-100/50">
-              <div className="flex items-center gap-1.5 mb-1.5"><Info size={12} className="text-[#005432]" /><span className="text-[10px] font-bold text-[#005432] uppercase tracking-wider">Resep Aktif</span></div>
-              <p className="text-[11px] text-gray-600 italic leading-relaxed">{product.ingredients?.map(r => `${r.pivot.jumlah_dibutuhkan}${r.satuan} ${r.nama_bahan}`).join(', ') || 'Belum ada resep'}</p>
+
+            {/* INFORMASI PRODUK */}
+            <div className="p-6 flex-1 flex flex-col">
+              <h3 className="text-xl font-bold text-gray-900 leading-tight">{product.nama_produk}</h3>
+              <p className="text-xs text-gray-400 mt-1 mb-4">Lappo Signature Series</p>
+
+              {/* INFO RESEP */}
+              <div className="mb-6 bg-gray-50 group-hover:bg-green-50/50 p-4 rounded-2xl border border-gray-100/50 transition-colors">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Info size={14} className="text-[#005432]" />
+                  <span className="text-[10px] font-bold text-[#005432] uppercase tracking-wider">Komposisi Resep</span>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {product.ingredients?.length > 0 
+                    ? product.ingredients.map(r => `${r.pivot.jumlah_dibutuhkan}${r.satuan} ${r.nama_bahan}`).join(', ') 
+                    : <span className="italic text-red-400">Belum ada konfigurasi resep</span>}
+                </p>
+              </div>
+
+              {/* HARGA & TOMBOL EDIT */}
+              <div className="flex justify-between items-center mt-auto pt-2">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Harga Jual</p>
+                  <p className="font-black text-2xl text-gray-900">Rp {product.harga.toLocaleString('id-ID')}</p>
+                </div>
+                <button onClick={() => openModal(product)} className="w-12 h-12 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-[#005432] hover:text-white hover:scale-110 transition-all shadow-sm">
+                  <Edit2 size={18} />
+                </button>
+              </div>
             </div>
-            <div className="flex justify-between items-center mt-auto pt-3 border-t border-gray-50">
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#005432]"></div><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tersedia</span></div>
-              <div className="flex items-center gap-3"><p className="font-black text-xl text-gray-900 whitespace-nowrap">Rp {product.harga.toLocaleString('id-ID')}</p><button onClick={() => openModal(product)} className="w-10 h-10 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-[#005432] transition-all"><Edit2 size={16} /></button></div>
-            </div>
+
           </div>
         ))}
       </div>
 
+      {/* MODAL (Bentuknya tetap sama, aku hilangkan di sini biar kodenya gak kepanjangan, pakai punyamu saja untuk bagian MODAL) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={() => setIsModalOpen(false)}></div>

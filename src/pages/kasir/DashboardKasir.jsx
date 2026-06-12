@@ -5,26 +5,45 @@ const DashboardKasir = () => {
   const [namaKasir, setNamaKasir] = useState('Kasir');
   const [isShiftActive, setIsShiftActive] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [pendapatanShift, setPendapatanShift] = useState(0);
 
-  const [pendapatanShift, setPendapatanShift] = useState(0);    
+  // STATE ANIMASI KONTEN
+  const [isContentMounted, setIsContentMounted] = useState(false);
 
-  // 1. INISIALISASI (Tarik data dari localStorage saat halaman dibuka ulang)
   useEffect(() => {
+    // JALANKAN ANIMASI SETELAH JEDA 300ms
+    const timer = setTimeout(() => {
+        setIsContentMounted(true);
+    }, 300);
+
     const storedName = localStorage.getItem('kasir_name');
     if (storedName) setNamaKasir(storedName);
 
-    // Cek apakah shift sedang aktif di memori
     const shiftActive = localStorage.getItem('is_shift_active');
     const shiftStart = localStorage.getItem('shift_start_time');
 
     if (shiftActive === 'true' && shiftStart) {
       setIsShiftActive(true);
-      // Hitung selisih detik dari waktu mulai sampai sekarang
       const elapsedSeconds = Math.floor((Date.now() - parseInt(shiftStart)) / 1000);
       setSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
     }
-   fetchPendapatan();
+
+    fetchPendapatan();
+
+    return () => clearTimeout(timer); // Bersihkan timer
   }, []);
+
+  useEffect(() => {
+    let interval = null;
+    if (isShiftActive) {
+      interval = setInterval(() => {
+        setSeconds((prev) => prev + 1);
+      }, 1000);
+    } else if (!isShiftActive && seconds !== 0) {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isShiftActive, seconds]);
 
   const fetchPendapatan = async () => {
     const kasirId = localStorage.getItem('kasir_id');
@@ -41,19 +60,6 @@ const DashboardKasir = () => {
     }
   };
 
-  // 2. STOPWATCH EFFECT
-  useEffect(() => {
-    let interval = null;
-    if (isShiftActive) {
-      interval = setInterval(() => {
-        setSeconds((prev) => prev + 1);
-      }, 1000);
-    } else if (!isShiftActive && seconds !== 0) {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isShiftActive, seconds]);
-
   const formatTime = (totalSeconds) => {
     const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
     const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
@@ -68,7 +74,6 @@ const DashboardKasir = () => {
     return name.substring(0, 2).toUpperCase();
   };
 
-  // 3. FUNGSI KLIK TOMBOL MULAI / AKHIRI SHIFT
   const handleToggleShift = async () => {
     const kasirId = localStorage.getItem('kasir_id');
     
@@ -91,13 +96,11 @@ const DashboardKasir = () => {
 
       if (data.success) {
         if (isShiftActive) {
-          // SHIFT DIAKHIRI -> Hapus data dari memori browser
           setIsShiftActive(false);
           setSeconds(0);
           localStorage.removeItem('is_shift_active');
           localStorage.removeItem('shift_start_time');
         } else {
-          // SHIFT DIMULAI -> Simpan waktu mulai ke memori browser
           setIsShiftActive(true);
           localStorage.setItem('is_shift_active', 'true');
           localStorage.setItem('shift_start_time', Date.now().toString());
@@ -110,7 +113,12 @@ const DashboardKasir = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-sans p-2">
+    // WRAPPER UTAMA DENGAN ANIMASI
+    <div 
+      className={`space-y-6 font-sans p-2 transition-all duration-1000 ease-out transform ${
+        isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+      }`}
+    >
       
       {/* HEADER TITLE */}
       <div>
@@ -130,13 +138,12 @@ const DashboardKasir = () => {
             <div className={`absolute bottom-2 right-2 w-7 h-7 border-4 border-white rounded-full shadow-sm ${isShiftActive ? 'bg-green-400' : 'bg-gray-400'}`}></div>
           </div>
           <h2 className="text-2xl font-bold text-gray-900">{namaKasir}</h2>
-          <p className="text-gray-400 text-sm mb-8 font-medium">Kasir Utama Shift Pagi</p>
-        {/* UBAH BAGIAN INI */}
-<div className="w-full bg-green-50/50 border border-green-100 rounded-2xl py-4 flex items-center justify-center">
-  <span className="text-2xl font-bold text-[#005432]">
-    Rp {pendapatanShift.toLocaleString('id-ID')}
-  </span>
-</div>
+          <p className="text-gray-400 text-sm mb-8 font-medium">Kasir Utama Shift</p>
+          <div className="w-full bg-green-50/50 border border-green-100 rounded-2xl py-4 flex items-center justify-center">
+            <span className="text-2xl font-bold text-[#005432]">
+              Rp {pendapatanShift.toLocaleString('id-ID')}
+            </span>
+          </div>
         </div>
 
         {/* CARD 2: STATUS SHIFT */}
