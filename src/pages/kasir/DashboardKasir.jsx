@@ -6,6 +6,8 @@ const DashboardKasir = () => {
   const [isShiftActive, setIsShiftActive] = useState(false);
   const [seconds, setSeconds] = useState(0);
 
+  const [pendapatanShift, setPendapatanShift] = useState(0);    
+
   // 1. INISIALISASI (Tarik data dari localStorage saat halaman dibuka ulang)
   useEffect(() => {
     const storedName = localStorage.getItem('kasir_name');
@@ -21,7 +23,23 @@ const DashboardKasir = () => {
       const elapsedSeconds = Math.floor((Date.now() - parseInt(shiftStart)) / 1000);
       setSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
     }
+   fetchPendapatan();
   }, []);
+
+  const fetchPendapatan = async () => {
+    const kasirId = localStorage.getItem('kasir_id');
+    if (!kasirId) return;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/kasir/${kasirId}/pendapatan`);
+      const data = await response.json();
+      if (data.success) {
+        setPendapatanShift(data.pendapatan);
+      }
+    } catch (error) {
+      console.error("Gagal mengambil pendapatan:", error);
+    }
+  };
 
   // 2. STOPWATCH EFFECT
   useEffect(() => {
@@ -113,9 +131,12 @@ const DashboardKasir = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900">{namaKasir}</h2>
           <p className="text-gray-400 text-sm mb-8 font-medium">Kasir Utama Shift Pagi</p>
-          <div className="w-full bg-green-50/50 border border-green-100 rounded-2xl py-4 flex items-center justify-center">
-            <span className="text-2xl font-bold text-[#005432]">Rp 2.500.000</span>
-          </div>
+        {/* UBAH BAGIAN INI */}
+<div className="w-full bg-green-50/50 border border-green-100 rounded-2xl py-4 flex items-center justify-center">
+  <span className="text-2xl font-bold text-[#005432]">
+    Rp {pendapatanShift.toLocaleString('id-ID')}
+  </span>
+</div>
         </div>
 
         {/* CARD 2: STATUS SHIFT */}

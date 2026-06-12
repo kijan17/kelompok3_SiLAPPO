@@ -55,14 +55,56 @@ const KelolaProduk = () => {
     setSelectedIngredients(newList);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const url = editingProduct ? `http://127.0.0.1:8000/api/products/${editingProduct.id}` : 'http://127.0.0.1:8000/api/products';
-    fetch(url, {
-      method: editingProduct ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...formData, ingredients: selectedIngredients })
-    }).then(res => res.json()).then(data => { if (data.success) { setIsModalOpen(false); fetchProducts(); } });
+
+    try {
+      // LANGKAH 1: SIMPAN ATAU UPDATE DATA PRODUK (NAMA & HARGA)
+      const productUrl = editingProduct ? `http://127.0.0.1:8000/api/products/${editingProduct.id}` : 'http://127.0.0.1:8000/api/products';
+      const productMethod = editingProduct ? 'PUT' : 'POST';
+
+      const productResponse = await fetch(productUrl, {
+        method: productMethod,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData) 
+      });
+
+      const productData = await productResponse.json();
+
+      if (productData.success) {
+        // Ambil ID produk yang sedang diedit atau baru dibuat
+        // Pastikan backend Laravel return data produk di 'productData.data.id' jika tambah baru
+        const productId = editingProduct ? editingProduct.id : productData.data.id;
+
+        // LANGKAH 2: SIMPAN RESEP KE ENDPOINT KHUSUS RESEP
+        // Ubah format data dari React (id, qty) agar sesuai dengan permintaan Laravel
+        const formattedIngredients = selectedIngredients.map(ing => ({
+          ingredient_id: ing.id,
+          jumlah_dibutuhkan: ing.qty
+        }));
+
+        const recipeResponse = await fetch(`http://127.0.0.1:8000/api/products/${productId}/recipes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ingredients: formattedIngredients })
+        });
+
+        const recipeData = await recipeResponse.json();
+
+        if (recipeData.success) {
+          alert("Mantap! Menu & Resep berhasil disimpan.");
+          setIsModalOpen(false);
+          fetchProducts(); // Refresh data di layar
+        } else {
+          alert("Menu tersimpan, tapi resep gagal: " + recipeData.message);
+        }
+      } else {
+        alert("Gagal menyimpan menu produk!");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Terjadi kesalahan sistem, cek console (F12).");
+    }
   };
 
   return (

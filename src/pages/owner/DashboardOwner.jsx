@@ -1,32 +1,41 @@
-import React from 'react';
-import { TrendingUp, Coffee, Milk } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, Coffee, Milk, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { useNavigate } from 'react-router-dom'; // <-- 1. IMPORT USENAVIGATE ASYA
 
 const DashboardOwner = () => {
-  // --- DUMMY DATA ---
-  const chartData = [
-    { name: 'Sen', current: 5, previous: 20 },
-    { name: 'Sel', current: 16, previous: 14 },
-    { name: 'Rab', current: 15, previous: 18 },
-    { name: 'Kam', current: 16, previous: 38 },
-    { name: 'Jum', current: 28, previous: 20 },
-    { name: 'Sab', current: 35, previous: 2 },
-    { name: 'Min', current: 18, previous: 15 },
-  ];
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  const navigate = useNavigate(); // <-- 2. DEKLARASI NAVIGATE
 
-  const performStaff = [
-    { id: 1, name: 'Raditya', target: 'Rp 2.000.000', status: 'PROGRES', initials: 'RY', bg: 'bg-[#005432]' },
-    { id: 2, name: 'Nadine', target: 'Rp 2.000.000', status: 'DONE', initials: 'NY', bg: 'bg-green-800' },
-    { id: 3, name: 'Raditya', target: 'Rp 2.000.000', status: 'DONE', initials: 'RY', bg: 'bg-[#005432]' },
-  ];
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/dashboard/owner')
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) setData(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Gagal load dashboard", err);
+        setLoading(false);
+      });
+  }, []);
 
-  const lowStock = [
-    { id: 1, name: 'Biji Arabica', sisa: 'Sisa 1.4 Kg', icon: <Coffee size={20} className="text-pink-500"/>, bg: 'bg-pink-50' },
-    { id: 2, name: 'Susu UHT', sisa: 'Sisa 5L', icon: <Milk size={20} className="text-orange-500"/>, bg: 'bg-orange-50' },
-  ];
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center font-bold text-[#005432]">Memuat Dashboard...</div>;
+  }
+
+  if (!data) return null;
+
+  const formatJuta = (angka) => {
+    if (angka >= 1000000) return 'Rp ' + (angka / 1000000).toFixed(1) + 'Jt';
+    if (angka >= 1000) return 'Rp ' + (angka / 1000).toFixed(1) + 'Rb';
+    return 'Rp ' + angka;
+  };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-sans relative min-h-screen pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500 font-sans relative min-h-screen pb-10 p-2">
       
       {/* HEADER SECTION */}
       <div>
@@ -39,9 +48,9 @@ const DashboardOwner = () => {
         
         {/* WIDGET 1: Perform Staff */}
         <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-          <h3 className="font-bold text-gray-800 text-sm mb-5">Perform Staff</h3>
+          <h3 className="font-bold text-gray-800 text-sm mb-5">Perform Staff (Hari Ini)</h3>
           <div className="space-y-4">
-            {performStaff.map((staff) => (
+            {data.performStaff.map((staff) => (
               <div key={staff.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full ${staff.bg} text-white flex items-center justify-center font-bold text-sm shadow-sm`}>
@@ -63,56 +72,62 @@ const DashboardOwner = () => {
 
         {/* WIDGET 2: Pendapatan & Pengeluaran */}
         <div className="space-y-6">
-          {/* Pendapatan Card */}
-          <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden">
+          
+          {/* Pendapatan Card -> Menuju Laporan */}
+          <div 
+            onClick={() => navigate('/laporan')} 
+            className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#005432] hover:shadow-lg transition-all"
+          >
              <div className="flex justify-between items-start mb-2">
-                <p className="text-sm font-bold text-gray-800">Pendapatan</p>
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1">
-                  ↗ +12%
+                <p className="text-sm font-bold text-gray-800">Pendapatan Bulan Ini</p>
+                <span className={`${data.financials.persen_pendapatan >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1`}>
+                  {data.financials.persen_pendapatan >= 0 ? '↗' : '↘'} {Math.abs(data.financials.persen_pendapatan)}%
                 </span>
              </div>
-             <h3 className="text-3xl font-black text-gray-900">Rp 45.2Jt</h3>
+             <h3 className="text-3xl font-black text-gray-900">{formatJuta(data.financials.pendapatan)}</h3>
+             <p className="text-[10px] text-gray-400 absolute bottom-3 right-5">Klik untuk detail →</p>
           </div>
 
-          {/* Pengeluaran Card */}
-          <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden">
+          {/* Pengeluaran Card -> Menuju Stok Bahan */}
+          <div 
+            onClick={() => navigate('/stok-bahan')} 
+            className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#005432] hover:shadow-lg transition-all"
+          >
              <div className="flex justify-between items-start mb-2">
-                <p className="text-sm font-bold text-gray-800">Pengeluaran</p>
-                <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1">
-                  ↘ -5%
+                <p className="text-sm font-bold text-gray-800">Pengeluaran (Restock)</p>
+                <span className={`${data.financials.persen_pengeluaran <= 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1`}>
+                  {data.financials.persen_pengeluaran >= 0 ? '↗' : '↘'} {Math.abs(data.financials.persen_pengeluaran)}%
                 </span>
              </div>
-             <h3 className="text-3xl font-black text-gray-900 mb-4">Rp 32.8Jt</h3>
-             
-             {/* Progress Bar Mini */}
-             <div>
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold mb-1">
-                    <span>Biji Kopi</span>
-                    <span>Rp 12.5Jt</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '40%' }}></div>
-                </div>
-             </div>
+             <h3 className="text-3xl font-black text-gray-900 mb-4">{formatJuta(data.financials.pengeluaran)}</h3>
+             <p className="text-[10px] text-gray-400 absolute bottom-3 right-5">Klik untuk detail →</p>
           </div>
         </div>
 
-        {/* WIDGET 3: Stok Menipis */}
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-          <h3 className="font-bold text-gray-800 text-sm mb-5">Stok Menipis</h3>
+        {/* WIDGET 3: Stok Menipis -> Menuju Stok Bahan */}
+        <div 
+            onClick={() => navigate('/stok-bahan')} 
+            className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm cursor-pointer hover:ring-2 hover:ring-red-400 hover:shadow-lg transition-all relative"
+        >
+          <h3 className="font-bold text-gray-800 text-sm mb-5">Peringatan Stok</h3>
           <div className="space-y-4">
-            {lowStock.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 border border-gray-50 bg-gray-50/30 p-3 rounded-2xl">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${item.bg}`}>
-                  {item.icon}
+            {data.lowStock.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Semua stok bahan aman.</p>
+            ) : (
+                data.lowStock.map((item, index) => (
+                <div key={index} className="flex items-center gap-4 border border-red-50 bg-red-50/30 p-3 rounded-2xl">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-red-100 text-red-500`}>
+                    <AlertTriangle size={20} />
+                    </div>
+                    <div>
+                    <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
+                    <p className="text-xs font-bold text-red-500">{item.sisa}</p>
+                    </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
-                  <p className="text-xs font-bold text-red-400">{item.sisa}</p>
-                </div>
-              </div>
-            ))}
+                ))
+            )}
           </div>
+          <p className="text-[10px] text-gray-400 absolute top-6 right-5">Klik untuk restock →</p>
         </div>
 
       </div>
@@ -122,14 +137,14 @@ const DashboardOwner = () => {
         <div className="flex justify-between items-start mb-6">
             <div>
                 <h3 className="font-bold text-gray-900">Tren Pendapatan</h3>
-                <p className="text-xs text-gray-400">Grafik pergerakan omzet minggu ini</p>
+                <p className="text-xs text-gray-400">Grafik omzet 7 hari terakhir (dalam Juta Rp)</p>
             </div>
             <button className="p-2 bg-green-50 text-green-600 rounded-lg"><TrendingUp size={18}/></button>
         </div>
         
         <div className="w-full h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorCurrentDash" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
@@ -145,10 +160,10 @@ const DashboardOwner = () => {
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={(value) => `Rp ${value}t`} />
               <Tooltip 
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                formatter={(value) => [`Rp ${value}.000.000`, '']}
+                formatter={(value) => [`Rp ${value} Juta`, 'Omzet']}
               />
-              <Area type="monotone" dataKey="previous" stroke="#fbbf24" strokeWidth={4} fillOpacity={1} fill="url(#colorPrevDash)" />
-              <Area type="monotone" dataKey="current" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorCurrentDash)" />
+              <Area type="monotone" dataKey="previous" stroke="#fbbf24" strokeWidth={4} fillOpacity={1} fill="url(#colorPrevDash)" name="Minggu Lalu" />
+              <Area type="monotone" dataKey="current" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorCurrentDash)" name="Minggu Ini" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

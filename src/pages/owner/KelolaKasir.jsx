@@ -6,6 +6,11 @@ const KelolaKasir = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingKasir, setEditingKasir] = useState(null);
   
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // STATE BARU UNTUK MODAL STATISTIK
+  const [statistikModal, setStatistikModal] = useState({ isOpen: false, data: null, pendapatan: 0 });
+  
   const [formData, setFormData] = useState({ 
     nama_lengkap: '', 
     id_staf: '', 
@@ -14,7 +19,6 @@ const KelolaKasir = () => {
     password: ''
   });
 
-  // Ambil data saat halaman pertama kali dimuat
   useEffect(() => {
     fetchKasirs();
   }, []);
@@ -28,7 +32,6 @@ const KelolaKasir = () => {
       .catch(err => console.error("Error fetching kasir:", err));
   };
 
-  // Buka Modal (Bisa untuk Tambah atau Edit)
   const openModal = (kasir = null) => {
     if (kasir) {
       setEditingKasir(kasir);
@@ -37,13 +40,22 @@ const KelolaKasir = () => {
         id_staf: kasir.id_staf, 
         status: kasir.status,
         username: kasir.username || '',
-        password: '' // Dikosongkan saat edit agar password lama tidak tertimpa jika tidak diisi
+        password: '' 
       });
     } else {
       setEditingKasir(null);
+      let maxId = 0;
+      kasirs.forEach(k => {
+        const num = parseInt(k.id_staf.replace(/[^0-9]/g, ''));
+        if (!isNaN(num) && num > maxId) {
+            maxId = num;
+        }
+      });
+      const nextId = `LC-KSR-${String(maxId + 1).padStart(3, '0')}`;
+
       setFormData({ 
         nama_lengkap: '', 
-        id_staf: `LC-KSR-${String(kasirs.length + 1).padStart(3, '0')}`, 
+        id_staf: nextId, 
         status: 'Aktif (Offline)',
         username: '',
         password: ''
@@ -52,7 +64,24 @@ const KelolaKasir = () => {
     setIsModalOpen(true);
   };
 
-  // Simpan Data (POST untuk tambah baru, PUT untuk edit)
+  // FUNGSI BARU UNTUK MEMBUKA STATISTIK
+  const openStatistik = async (kasir) => {
+    try {
+      // Panggil API pendapatan yang sudah kita buat sebelumnya
+      const res = await fetch(`http://127.0.0.1:8000/api/kasir/${kasir.id}/pendapatan`);
+      const data = await res.json();
+      
+      setStatistikModal({
+        isOpen: true,
+        data: kasir,
+        pendapatan: data.success ? data.pendapatan : 0
+      });
+    } catch (error) {
+      console.error("Gagal mengambil statistik", error);
+      alert("Gagal mengambil data statistik kasir.");
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const method = editingKasir ? 'PUT' : 'POST';
@@ -80,7 +109,6 @@ const KelolaKasir = () => {
     });
   };
 
-  // Hapus Data
   const handleDelete = (id, nama) => {
     if(window.confirm(`Yakin ingin menghapus staf kasir: ${nama}?`)) {
       fetch(`http://127.0.0.1:8000/api/kasirs/${id}`, { method: 'DELETE' })
@@ -89,15 +117,34 @@ const KelolaKasir = () => {
     }
   };
 
-  // Fungsi Pembuat Inisial Nama (Misal: "Nadine Putri" -> "NP")
   const getInitials = (name) => {
-    if (!name) return "UK";
+    if (!name) return "KS";
     const words = name.split(' ');
     if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Hitung Data Statistik Dinamis
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "Belum ada riwayat";
+    const past = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - past;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Baru saja ganti status";
+    if (diffMins < 60) return `Terakhir Jaga: ${diffMins} menit lalu`;
+    if (diffHours < 24) return `Terakhir Jaga: ${diffHours} jam lalu`;
+    return `Terakhir Jaga: ${diffDays} hari lalu`;
+  };
+
+  const filteredKasirs = kasirs.filter(kasir => 
+    kasir.nama_lengkap.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    kasir.id_staf.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    kasir.username.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const totalKasir = kasirs.length;
   const kasirSedangJaga = kasirs.filter(k => k.status === 'Sedang Jaga').length;
 
@@ -112,7 +159,13 @@ const KelolaKasir = () => {
         <div className="flex gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input type="text" placeholder="Search..." className="pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-[#005432] outline-none shadow-sm" />
+            <input 
+              type="text" 
+              placeholder="Cari nama / ID..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-[#005432] outline-none shadow-sm" 
+            />
           </div>
           <button onClick={() => openModal()} className="flex items-center gap-2 bg-[#005432] text-white px-4 py-2.5 rounded-lg font-bold hover:scale-105 transition-all shadow-md">
             <Plus size={18} /> Tambah Kasir Baru
@@ -120,7 +173,6 @@ const KelolaKasir = () => {
         </div>
       </div>
 
-      {/* Tabel Header (Imitasi) */}
       <div className="grid grid-cols-12 px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
         <div className="col-span-4">Foto & Nama Lengkap</div>
         <div className="col-span-2">ID Staf</div>
@@ -129,16 +181,14 @@ const KelolaKasir = () => {
         <div className="col-span-2 text-right">Aksi</div>
       </div>
 
-      {/* List Kasir Dinamis */}
       <div className="space-y-4">
-        {kasirs.length === 0 ? (
+        {filteredKasirs.length === 0 ? (
             <div className="bg-white p-10 rounded-2xl text-center text-gray-400 border border-gray-100">
-                Belum ada data staf kasir. Klik "Tambah Kasir Baru" untuk memulai.
+                {searchTerm ? "Data kasir tidak ditemukan." : "Belum ada data staf kasir. Klik 'Tambah Kasir Baru' untuk memulai."}
             </div>
         ) : (
-            kasirs.map((item) => (
+            filteredKasirs.map((item) => (
             <div key={item.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center grid grid-cols-12 hover:shadow-md transition-shadow">
-                {/* Kolom 1: Avatar & Nama */}
                 <div className="col-span-4 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center font-black text-gray-600">
                     {getInitials(item.nama_lengkap)}
@@ -149,12 +199,10 @@ const KelolaKasir = () => {
                 </div>
                 </div>
 
-                {/* Kolom 2: ID */}
                 <div className="col-span-2 text-gray-500 font-medium">
                 {item.id_staf}
                 </div>
 
-                {/* Kolom 3: Status Badge */}
                 <div className="col-span-2 flex justify-center">
                 <span className={`px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 w-fit
                     ${item.status === 'Sedang Jaga' ? 'bg-green-100 text-green-700' : 
@@ -165,14 +213,16 @@ const KelolaKasir = () => {
                 </span>
                 </div>
 
-                {/* Kolom 4: Dummy Info Shift (karena tabel kasir aslinya belum punya relasi transaksi) */}
-                <div className="col-span-2 text-xs text-gray-500">
-                {item.status === 'Sedang Jaga' ? 'Total Shift: 12 | Transaksi: 45' : 'Terakhir Jaga: 2 jam lalu'}
+                <div className="col-span-2 text-xs">
+                {item.status === 'Sedang Jaga' 
+                  ? <span className="font-bold text-[#005432]">Sedang aktif di kasir</span> 
+                  : <span className="text-gray-500">{formatTimeAgo(item.updated_at)}</span>
+                }
                 </div>
 
-                {/* Kolom 5: Aksi */}
                 <div className="col-span-2 flex justify-end gap-2">
-                <button className="flex items-center gap-1 px-3 py-1.5 border border-blue-100 text-blue-600 bg-blue-50 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-colors">
+                {/* TOMBOL STATISTIK DIAKTIFKAN */}
+                <button onClick={() => openStatistik(item)} className="flex items-center gap-1 px-3 py-1.5 border border-blue-100 text-blue-600 bg-blue-50 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-colors">
                     <BarChart2 size={14}/> Statistik
                 </button>
                 <button onClick={() => openModal(item)} className="flex items-center gap-1 px-3 py-1.5 border border-green-100 text-green-600 bg-green-50 rounded-lg text-xs font-bold hover:bg-green-600 hover:text-white transition-colors">
@@ -187,7 +237,6 @@ const KelolaKasir = () => {
         )}
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-center">
           <p className="text-xs font-bold text-gray-400 uppercase mb-2">Total Kasir Terdaftar</p>
@@ -213,6 +262,43 @@ const KelolaKasir = () => {
           </div>
         </div>
       </div>
+
+      {/* MODAL STATISTIK KASIR */}
+      {statistikModal.isOpen && statistikModal.data && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={() => setStatistikModal({ isOpen: false, data: null, pendapatan: 0 })}></div>
+          <div className="relative w-full max-w-sm bg-white border border-white/50 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95">
+            <div className="bg-blue-600 p-6 text-white flex justify-between items-center">
+                <div>
+                    <h2 className="text-xl font-black">Statistik Kasir</h2>
+                    <p className="text-blue-200 text-xs mt-1">Performa Hari Ini</p>
+                </div>
+                <button onClick={() => setStatistikModal({ isOpen: false, data: null, pendapatan: 0 })} className="text-blue-200 hover:text-white"><X size={24}/></button>
+            </div>
+            
+            <div className="p-8 text-center space-y-6">
+                <div className="w-20 h-20 mx-auto rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center font-black text-blue-600 text-2xl">
+                    {getInitials(statistikModal.data.nama_lengkap)}
+                </div>
+                <div>
+                    <h3 className="font-bold text-gray-900 text-xl">{statistikModal.data.nama_lengkap}</h3>
+                    <p className="text-sm text-gray-500">{statistikModal.data.id_staf}</p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p className="text-xs font-bold text-gray-400 uppercase mb-1">Total Pendapatan Hari Ini</p>
+                    <p className="text-2xl font-black text-[#005432]">
+                        Rp {statistikModal.pendapatan.toLocaleString('id-ID')}
+                    </p>
+                </div>
+
+                <button onClick={() => setStatistikModal({ isOpen: false, data: null, pendapatan: 0 })} className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors">
+                    Tutup
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL TAMBAH / EDIT KASIR */}
       {isModalOpen && (
