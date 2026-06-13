@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from 'react';
-// Tambahkan import 'Lock' untuk icon gembok
-import { Search, Coffee, CupSoda, Utensils, Award, FileText, ShoppingBag, Plus, Minus, Trash2, X, Lock } from 'lucide-react';
+import { Search, Coffee, CupSoda, Utensils, FileText, ShoppingBag, Plus, Minus, Trash2, X, Lock } from 'lucide-react';
 
 const TransaksiKasir = () => {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
-  const [activeCategory, setActiveCategory] = useState('Kopi');
+  const [activeCategory, setActiveCategory] = useState('Semua Menu');
   const [searchQuery, setSearchQuery] = useState('');
   
   const [namaKasir, setNamaKasir] = useState('Kasir');
-  // STATE BARU: Untuk mengecek apakah shift sedang jalan
   const [isShiftActive, setIsShiftActive] = useState(false);
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  
+  const [isContentMounted, setIsContentMounted] = useState(false);
 
   useEffect(() => {
-    // 1. Ambil nama kasir
+    setTimeout(() => { setIsContentMounted(true); }, 100);
+
     const storedName = localStorage.getItem('kasir_name');
     if (storedName) setNamaKasir(storedName);
 
-    // 2. Cek status shift dari localStorage
-    const shiftStatus = localStorage.getItem('is_shift_active');
+    const kasirId = localStorage.getItem('kasir_id');
+    const shiftStatus = localStorage.getItem(`is_shift_active_${kasirId}`);
     setIsShiftActive(shiftStatus === 'true');
 
-    // 3. Ambil data produk
     fetch('http://127.0.0.1:8000/api/products')
       .then(res => res.json())
       .then(data => {
@@ -33,14 +33,14 @@ const TransaksiKasir = () => {
           id: p.id,
           name: p.nama_produk,
           price: Number(p.harga),
-          desc: 'Menu spesial dari Lappo Coffee. (Deskripsi belum tersedia di database)',
+          desc: 'Menu spesial dari Lappo Coffee. Diramu dengan bahan berkualitas tinggi.',
           category: 'Kopi', 
           image: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=500&q=80',
           tags: ['Tersedia']
         }));
         setProducts(formattedProducts);
       })
-      .catch(err => console.error("Waduh, gagal narik data menu:", err));
+      .catch(err => console.error("Gagal menarik data menu:", err));
   }, []);
 
   const categories = [
@@ -51,7 +51,6 @@ const TransaksiKasir = () => {
   ];
 
   const addToCart = (product) => {
-    // Proteksi tambahan: Jangan bisa tambah kalau shift mati
     if (!isShiftActive) return; 
     
     const existing = cart.find(item => item.id === product.id);
@@ -75,7 +74,7 @@ const TransaksiKasir = () => {
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
   
   const clearCart = () => {
-    if(window.confirm('Yakin ingin menghapus semua pesanan?')) setCart([]);
+    if(window.confirm('Yakin ingin menghapus semua pesanan dari keranjang?')) setCart([]);
   };
 
   const openDetailModal = (product) => {
@@ -103,16 +102,13 @@ const TransaksiKasir = () => {
 
     fetch('http://127.0.0.1:8000/api/transactions', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Accept': 'application/json' 
-      },
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload)
     })
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        alert("Transaksi Berhasil!");
+        alert("Transaksi Berhasil Diproses!");
         setCart([]);
       } else {
         alert("Gagal: " + data.message);
@@ -120,7 +116,7 @@ const TransaksiKasir = () => {
     })
     .catch(err => {
       console.error("Error API:", err);
-      alert("Error Koneksi: " + err);
+      alert("Error Koneksi ke Server.");
     });
   };
 
@@ -130,177 +126,192 @@ const TransaksiKasir = () => {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 animate-in fade-in duration-500 font-sans min-h-screen relative">
-      
-      {/* AREA KIRI: KATALOG PRODUK */}
-      <div className="w-full lg:w-[65%] flex flex-col gap-6 pb-10">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Selamat Datang, <span className="text-[#005432]">{namaKasir}</span></h1>
-            <p className="text-gray-500 mt-1">Halaman Transaksi & Pencatatan Penjualan</p>
-          </div>
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#005432] outline-none shadow-sm" 
-            />
-          </div>
-        </div>
-
-        {/* NOTIFIKASI PENGUNCIAN JIKA SHIFT BELUM MULAI */}
-        {!isShiftActive && (
-          <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-2xl flex items-center gap-4 shadow-sm animate-pulse">
-            <div className="bg-red-100 p-3 rounded-full">
-              <Lock size={24} />
-            </div>
+    <div className="relative min-h-screen font-sans">
+      {/* WRAPPER KONTEN (Pemisahan animasi agar modal bisa full screen) */}
+      <div className={`flex flex-col xl:flex-row gap-6 transition-all duration-700 ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        
+        {/* AREA KIRI: KATALOG PRODUK */}
+        <div className="w-full xl:w-[65%] flex flex-col gap-6 pb-10">
+          
+          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200 pb-4">
             <div>
-              <p className="font-black text-sm uppercase tracking-wide">Sistem Transaksi Terkunci</p>
-              <p className="text-sm font-medium mt-0.5">Anda belum memulai shift. Buka Dashboard Kasir dan klik "Mulai Shift" untuk melayani pelanggan.</p>
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Katalog <span className="text-[#005432]">Menu</span></h1>
+              <p className="text-gray-500 mt-1 text-sm">Pilih menu dan kelola pesanan pelanggan.</p>
+            </div>
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input 
+                type="text" placeholder="Cari nama menu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] outline-none transition-all shadow-sm" 
+              />
             </div>
           </div>
-        )}
 
-        {/* KATEGORI FILTER */}
-        <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-          <span className="font-bold text-gray-800 text-sm px-2 whitespace-nowrap">Kategori Menu</span>
-          <div className="flex gap-2 ml-auto">
+          {/* NOTIFIKASI PENGUNCIAN JIKA SHIFT BELUM MULAI */}
+          {!isShiftActive && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-center gap-4 shadow-sm relative overflow-hidden">
+              <div className="absolute left-0 top-0 w-2 h-full bg-red-500"></div>
+              <div className="bg-red-100 text-red-600 p-3 rounded-full ml-2">
+                <Lock size={20} />
+              </div>
+              <div>
+                <p className="font-bold text-sm uppercase tracking-wide">Sistem POS Terkunci</p>
+                <p className="text-xs font-medium mt-0.5 opacity-80">Anda belum memulai shift. Buka Dashboard Kasir dan klik "Mulai Shift" untuk mengaktifkan fitur pesanan.</p>
+              </div>
+            </div>
+          )}
+
+          {/* KATEGORI FILTER */}
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {categories.map((cat) => (
               <button key={cat.name} onClick={() => setActiveCategory(cat.name)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeCategory === cat.name ? 'bg-green-50 text-[#005432] border border-green-100' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}>
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap border shadow-sm
+                  ${activeCategory === cat.name 
+                    ? 'bg-[#005432] text-white border-[#005432]' 
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
                 {cat.icon} {cat.name}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* GRID PRODUK */}
-        {products.length === 0 ? (
-           <div className="bg-white p-10 rounded-2xl border border-gray-100 text-center flex flex-col items-center justify-center text-gray-400">
-              <Coffee size={48} className="mb-4 opacity-50" />
-              <p className="font-bold">Memuat menu dari database...</p>
-           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className={`bg-white p-4 rounded-2xl border border-gray-100 shadow-sm transition-shadow relative flex flex-col ${!isShiftActive ? 'opacity-60 grayscale-[30%]' : 'hover:shadow-md'}`}>
-                <div className="flex gap-3 mb-3">
-                  <img src={product.image} alt={product.name} className="w-[70px] h-[70px] object-cover rounded-xl border border-gray-100 shrink-0" />
-                  <div className="flex flex-col">
-                    <h4 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2">{product.name}</h4>
-                    <p className="font-black text-[#005432] text-sm mt-auto pt-1">Rp {product.price.toLocaleString('id-ID')}</p>
+          {/* GRID PRODUK */}
+          {products.length === 0 ? (
+             <div className="bg-white p-12 rounded-2xl border border-gray-200 text-center flex flex-col items-center justify-center text-gray-400 shadow-sm">
+                <Coffee size={48} className="mb-4 opacity-50" />
+                <p className="font-bold text-gray-500">Memuat katalog menu...</p>
+             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredProducts.map((product) => (
+                <div key={product.id} className={`bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col transition-all ${!isShiftActive ? 'opacity-50 grayscale-[50%]' : 'hover:border-[#005432]/30 hover:shadow-md'}`}>
+                  <div className="flex gap-4 mb-4">
+                    <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-100">
+                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex flex-col justify-between py-1">
+                      <h4 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2">{product.name}</h4>
+                      <div>
+                        <p className="font-black text-[#005432] text-sm">Rp {product.price.toLocaleString('id-ID')}</p>
+                        <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${!isShiftActive ? 'bg-gray-100 text-gray-500' : 'bg-green-50 text-green-700'}`}>{product.tags[0]}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-auto">
+                    <button 
+                      onClick={() => addToCart(product)} 
+                      disabled={!isShiftActive}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border
+                        ${isShiftActive ? 'bg-white border-[#005432] text-[#005432] hover:bg-[#005432] hover:text-white' : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}`}
+                    >
+                      <Plus size={14} strokeWidth={3}/> Tambah
+                    </button>
+                    <button onClick={() => openDetailModal(product)} className="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-600 rounded-xl border border-gray-200 hover:bg-gray-100 hover:text-[#005432] transition-colors">
+                      <FileText size={16} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2 mb-4">
-                  {product.tags.map(tag => (
-                    <span key={tag} className={`px-2 py-0.5 rounded text-[10px] font-bold ${!isShiftActive ? 'bg-gray-100 text-gray-500' : 'bg-green-50 text-[#005432]'}`}>{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* AREA KANAN: KERANJANG */}
+        <div className="w-full xl:w-[35%]">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col h-[calc(100vh-2.5rem)] sticky top-5">
+            <h3 className="text-lg font-bold text-gray-900 mb-5 border-b border-gray-100 pb-4 flex items-center gap-2">
+              <ShoppingBag size={20} className="text-[#005432]" /> Keranjang Pesanan
+            </h3>
+            
+            <div className="flex-1 overflow-y-auto pr-2">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 gap-4 opacity-70">
+                  <ShoppingBag size={56} strokeWidth={1} />
+                  <div className="text-center">
+                    <p className="font-semibold text-gray-500 text-sm">Keranjang Masih Kosong</p>
+                    <p className="text-xs mt-1">Pilih menu dari katalog untuk menambahkan.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cart.map(item => (
+                    <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors shadow-sm">
+                      <div className="flex flex-col max-w-[50%]">
+                        <span className="font-semibold text-gray-900 text-sm line-clamp-1">{item.name}</span>
+                        <span className="text-xs text-[#005432] font-bold mt-0.5">Rp {item.price.toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-0.5">
+                          <button onClick={() => updateQty(item.id, -1)} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:shadow-sm rounded-md transition-all"><Minus size={14} strokeWidth={2.5} /></button>
+                          <span className="font-bold text-sm w-6 text-center text-gray-800">{item.qty}</span>
+                          <button onClick={() => updateQty(item.id, 1)} className="w-7 h-7 flex items-center justify-center text-[#005432] hover:bg-white hover:shadow-sm rounded-md transition-all"><Plus size={14} strokeWidth={2.5} /></button>
+                        </div>
+                        <button onClick={() => removeFromCart(item.id)} className="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
                   ))}
                 </div>
-                <div className="flex gap-2 mt-auto">
-                  <button 
-                    onClick={() => addToCart(product)} 
-                    disabled={!isShiftActive}
-                    className={`flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-colors
-                      ${isShiftActive ? 'bg-[#e6f4ea] text-[#005432] hover:bg-[#005432] hover:text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-                  >
-                    <Plus size={14}/> Tambah
-                  </button>
-                  <button onClick={() => openDetailModal(product)} className="flex-1 bg-gray-50 text-gray-600 py-2 rounded-xl text-xs font-bold border border-gray-100 hover:bg-gray-100 transition-colors">Detail</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* AREA KANAN: KERANJANG */}
-      <div className="w-full lg:w-[35%]">
-        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 flex flex-col h-[calc(100vh-2rem)] sticky top-4">
-          <h3 className="text-lg font-black text-gray-900 mb-6 border-b border-gray-100 pb-4">Transaksi Baru</h3>
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {cart.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-300 gap-3">
-                <ShoppingBag size={64} strokeWidth={1} />
-                <div className="text-center">
-                  <p className="font-bold text-gray-400">Belum ada pesanan</p>
-                  <p className="text-xs">Silakan klik tombol "+ Tambah" di menu</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {cart.map(item => (
-                  <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-gray-900 text-sm line-clamp-1">{item.name}</span>
-                      <span className="text-xs text-gray-500 font-medium">Rp {item.price.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg p-1">
-                        <button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-md"><Minus size={14} /></button>
-                        <span className="font-bold text-sm w-4 text-center">{item.qty}</span>
-                        <button onClick={() => updateQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-[#005432] bg-green-50 hover:bg-green-100 rounded-md"><Plus size={14} /></button>
-                      </div>
-                      <button onClick={() => removeFromCart(item.id)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={16} /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <div className="bg-gray-50 p-4 rounded-2xl mb-4">
-              <div className="flex justify-between items-center mb-1">
-                <p className="font-bold text-gray-500 text-sm">Total Pembayaran</p>
-                <div className="text-right">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase">Total Pajak: <br/>Rp {totalPajak.toLocaleString('id-ID')}</p>
-                </div>
-              </div>
-              <h2 className="text-4xl font-black text-gray-400">
-                <span className={cart.length > 0 ? "text-[#005432]" : ""}>Rp {totalPembayaran.toLocaleString('id-ID')}</span>
-              </h2>
+              )}
             </div>
-            <div className="flex gap-2 mb-3">
-              <button onClick={clearCart} disabled={cart.length === 0} className="flex-1 bg-gray-100 text-gray-400 py-3 rounded-xl font-bold text-sm hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50">Hapus Pesanan</button>
-              <button disabled={cart.length === 0} className="flex-1 bg-gray-100 text-gray-400 py-3 rounded-xl font-bold text-sm hover:bg-orange-50 hover:text-orange-500 transition-colors disabled:opacity-50">Tahan Pesanan</button>
+
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl mb-4">
+                <div className="flex justify-between items-center mb-1">
+                  <p className="font-semibold text-gray-500 text-xs uppercase tracking-wider">Total Pembayaran</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase text-right">Termasuk Pajak <br/>Rp {totalPajak.toLocaleString('id-ID')}</p>
+                </div>
+                <h2 className="text-3xl font-black text-gray-900 mt-1">
+                  Rp {totalPembayaran.toLocaleString('id-ID')}
+                </h2>
+              </div>
+              
+              <div className="flex gap-3 mb-3">
+                <button onClick={clearCart} disabled={cart.length === 0} className="flex-1 bg-white border border-gray-200 text-gray-500 py-2.5 rounded-xl font-bold text-xs hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all disabled:opacity-50 shadow-sm">Kosongkan</button>
+                <button disabled={cart.length === 0} className="flex-1 bg-white border border-gray-200 text-gray-500 py-2.5 rounded-xl font-bold text-xs hover:bg-orange-50 hover:text-orange-600 hover:border-orange-100 transition-all disabled:opacity-50 shadow-sm">Tahan Pesanan</button>
+              </div>
+              
+              <button 
+                onClick={handleCheckout} 
+                disabled={cart.length === 0 || !isShiftActive} 
+                className={`w-full py-4 rounded-xl font-bold text-base transition-all shadow-sm flex items-center justify-center gap-2
+                  ${cart.length > 0 && isShiftActive ? 'bg-[#005432] text-white hover:bg-green-900 shadow-md hover:-translate-y-0.5' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+              >
+                Proses Pembayaran &rarr;
+              </button>
             </div>
-            <button 
-              onClick={handleCheckout} 
-              disabled={cart.length === 0 || !isShiftActive} 
-              className={`w-full py-4 rounded-xl font-black text-lg transition-all shadow-sm ${cart.length > 0 && isShiftActive ? 'bg-[#005432] text-white hover:bg-green-900 shadow-md hover:-translate-y-0.5' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-            >
-              Lanjutkan ke Pembayaran
-            </button>
           </div>
         </div>
       </div>
 
-      {/* MODAL DETAIL PRODUK TETAP SAMA */}
+      {/* MODAL DI LUAR DIV ANIMASI AGAR BISA FULL SCREEN */}
       {isDetailModalOpen && selectedProduct && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsDetailModalOpen(false)}></div>
-          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95">
-            <button onClick={() => setIsDetailModalOpen(false)} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors z-10"><X size={20} /></button>
-            <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-56 object-cover" />
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-2">
-                <h2 className="text-2xl font-black text-gray-900">{selectedProduct.name}</h2>
-                <span className="bg-[#deff9a] text-[#005432] px-3 py-1 rounded-lg font-black text-sm">Rp {selectedProduct.price.toLocaleString('id-ID')}</span>
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setIsDetailModalOpen(false)}></div>
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100">
+            <button onClick={() => setIsDetailModalOpen(false)} className="absolute top-4 right-4 bg-white/80 backdrop-blur-md text-gray-800 p-2 rounded-full shadow-sm hover:bg-white transition-colors z-10"><X size={18} /></button>
+            <div className="w-full h-56 bg-gray-100 relative">
+              <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" />
+              <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/60 to-transparent"></div>
+            </div>
+            <div className="p-6 relative -mt-6 bg-white rounded-t-3xl">
+              <div className="flex justify-between items-start mb-3">
+                <h2 className="text-xl font-bold text-gray-900 pr-4">{selectedProduct.name}</h2>
+                <span className="bg-green-50 text-[#005432] border border-green-100 px-2.5 py-1 rounded-lg font-bold text-sm whitespace-nowrap">Rp {selectedProduct.price.toLocaleString('id-ID')}</span>
               </div>
-              <p className="text-sm text-gray-500 mb-6 leading-relaxed">{selectedProduct.desc}</p>
+              <p className="text-sm text-gray-500 mb-6 leading-relaxed font-medium">{selectedProduct.desc}</p>
+              
               <button 
                 onClick={() => { addToCart(selectedProduct); setIsDetailModalOpen(false); }} 
                 disabled={!isShiftActive}
-                className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-lg
-                  ${isShiftActive ? 'bg-[#005432] text-white hover:bg-green-900' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm
+                  ${isShiftActive ? 'bg-[#005432] text-white hover:bg-green-900 hover:shadow-md hover:-translate-y-0.5' : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'}`}
               >
-                <Plus size={18} /> Tambah ke Pesanan
+                <Plus size={18} /> Tambahkan ke Pesanan
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };

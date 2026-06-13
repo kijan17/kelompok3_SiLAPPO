@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Layers, Users, FileText, ShoppingCart, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, Layers, Users, FileText, ShoppingCart, LogOut, Receipt } from 'lucide-react';
 import LappoLogo from '../assets/LappoLogo.jpg'; 
 
 const Sidebar = () => {
@@ -31,12 +31,22 @@ const Sidebar = () => {
   const menuKasir = [
     { name: 'Dashboard Kasir', icon: <LayoutDashboard size={20} />, path: '/dashboardKasir' },
     { name: 'Transaksi Baru', icon: <ShoppingCart size={20} />, path: '/pos' },
+    { name: 'Riwayat Transaksi', icon: <Receipt size={20} />, path: '/riwayat-transaksi' },
   ];
 
   const activeMenus = isOwner ? menuOwner : menuKasir;
 
-  const handleLogout = () => {
-    // Tambahkan efek mundur sedikit sebelum logout
+ const handleLogout = () => {
+    // Cek apakah kasir yang sedang login masih punya shift aktif
+    const kasirId = localStorage.getItem('kasir_id');
+    const isShiftActive = localStorage.getItem(`is_shift_active_${kasirId}`);
+
+    if (isShiftActive === 'true') {
+      alert("⚠️ GAGAL LOGOUT: Anda masih dalam sesi shift aktif!\n\nSilakan kembali ke Dashboard Kasir dan klik 'Akhiri Sesi Shift' terlebih dahulu sebelum keluar.");
+      return; // Hentikan proses logout
+    }
+
+    // Jika shift sudah mati, lanjutkan proses logout
     setIsMounted(false);
     setTimeout(() => {
         localStorage.removeItem('role'); 
@@ -93,7 +103,7 @@ const Sidebar = () => {
         >
           <LogOut size={20} className="rotate-180" />
           <span className="text-sm tracking-tight">
-            Log Out {isOwner ? 'Asya' : 'Kasir'}
+            Log Out {isOwner ? 'Owner' : 'Kasir'}
           </span>
         </button>
       </div>

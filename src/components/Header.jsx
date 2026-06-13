@@ -1,66 +1,63 @@
 import React, { useState, useEffect } from 'react';
 
-const Navbar = () => {
-  const [currentDate, setCurrentDate] = useState('');
-  // Tambahkan state baru untuk menyimpan nama
-  const [userName, setUserName] = useState('');
-  
-  // Mengambil data 'role' dari memori browser
-  const userRole = localStorage.getItem('role') || 'kasir';
+const Header = () => {
+  const [userName, setUserName] = useState('Kasir');
+  const [userRole, setUserRole] = useState('kasir');
 
   useEffect(() => {
-    // 1. Logika untuk Tanggal
-    const today = new Date();
-    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    setCurrentDate(today.toLocaleDateString('id-ID', options));
+    // Ambil nama dan role dari localStorage saat komponen dimuat
+    const name = localStorage.getItem('kasir_name');
+    const role = localStorage.getItem('role');
+    
+    if (name) setUserName(name);
+    if (role) setUserRole(role);
+  }, []);
 
-    // 2. Logika untuk mengambil Nama Kasir/Owner dari localStorage
-    const storedName = localStorage.getItem('kasir_name');
-    if (storedName) {
-      setUserName(storedName);
-    } else {
-      // Fallback jika kosong
-      setUserName(userRole === 'owner' ? 'Owner Lappo' : 'Kasir');
-    }
-  }, [userRole]);
+  // FUNGSI PEMBUAT INISIAL OTOMATIS
+  const getInitials = (name) => {
+    if (!name) return "KS";
+    const words = name.trim().split(' ');
+    // Jika nama terdiri dari 2 kata atau lebih, ambil huruf pertama dari 2 kata pertama
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    // Jika cuma 1 kata, ambil 2 huruf pertamanya
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Format tanggal hari ini (Contoh: Minggu, 14 Juni 2026)
+  const today = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
   return (
-    <div className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 w-full shrink-0">
+    <header className="bg-white border-b border-gray-100 px-8 py-4 flex justify-between items-center sticky top-0 z-40">
       
-      {/* BAHAGIAN KIRI: Tarikh */}
-      <div className="text-sm font-medium text-gray-600">
-        {currentDate}
+      {/* BAGIAN KIRI: Tanggal */}
+      <div className="text-gray-600 font-medium text-sm">
+        {today}
       </div>
 
-      {/* BAHAGIAN KANAN: Foto Profil Dinamik */}
-      <div className="flex items-center gap-3 bg-white px-4 py-1.5 rounded-full border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer shadow-sm">
-        <div className="text-right hidden sm:block">
-          
-          {/* NAMA KINI DINAMIS: Akan menampilkan Aditya, Asya, dll sesuai yang login */}
-          <p className="text-sm font-bold text-gray-900 leading-none">
-            {userName}
-          </p>
-          
-          {/* Status berubah mengikut role */}
-          <p className="text-[10px] text-[#005432] font-bold mt-1 uppercase">
+      {/* BAGIAN KANAN: Profil Info & Inisial */}
+      <div className="flex items-center gap-3 bg-white border border-gray-100 shadow-sm py-1.5 px-1.5 rounded-full hover:shadow-md transition-shadow cursor-default">
+        
+        {/* Teks Nama & Status */}
+        <div className="flex flex-col text-right pl-4">
+          <span className="font-bold text-gray-900 text-sm leading-tight">{userName}</span>
+          <span className="text-[10px] font-bold text-[#005432] uppercase tracking-widest mt-0.5">
             {userRole === 'owner' ? 'Owner Aktif' : 'Kasir Aktif'}
-          </p>
+          </span>
         </div>
         
-        {/* Gambar berubah mengikut role */}
-        <img 
-          src={
-            userRole === 'owner' 
-              ? "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=100&h=100" 
-              : "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100&h=100" 
-          } 
-          alt="Profile" 
-          className="w-8 h-8 rounded-full object-cover border border-gray-200"
-        />
-      </div>
+        {/* LINGKARAN INISIAL (Pengganti Gambar) */}
+        <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-inner">
+          {getInitials(userName)}
+        </div>
 
-    </div>
+      </div>
+    </header>
   );
 };
 
-export default Navbar;
+export default Header;

@@ -105,7 +105,7 @@ const Login = () => {
             {/* Input Username */}
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">
-                Username Kasir
+                Username 
               </label>
               <input
                 type="text"

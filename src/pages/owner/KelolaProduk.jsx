@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Coffee, Info, X, Save, Trash2, PlusCircle } from 'lucide-react';
+import { Plus, Edit2, Coffee, Info, X, Save, Trash2, PlusCircle, ShoppingBag } from 'lucide-react';
 
 const KelolaProduk = () => {
   const [products, setProducts] = useState([]);
@@ -11,13 +11,10 @@ const KelolaProduk = () => {
   const [selectedIngredients, setSelectedIngredients] = useState([]); 
   const [tempIngredient, setTempIngredient] = useState({ id: '', qty: '' });
 
-  // STATE ANIMASI
   const [isContentMounted, setIsContentMounted] = useState(false);
 
   useEffect(() => { 
-    // JALANKAN ANIMASI SETELAH JEDA 100ms
     setTimeout(() => { setIsContentMounted(true); }, 100);
-    
     fetchProducts(); 
     fetchIngredients(); 
   }, []);
@@ -108,113 +105,126 @@ const KelolaProduk = () => {
   };
 
   return (
-    <div 
-      className={`relative min-h-screen space-y-8 p-2 font-sans transition-all duration-1000 ease-out transform ${
-        isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-      }`}
-    >
-      {/* HEADER */}
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Katalog Produk</h1>
-          <p className="text-gray-500 mt-1">Manajemen Menu & Resep Otomatis</p>
-        </div>
-        <button onClick={() => openModal()} className="flex items-center gap-2 bg-[#005432] text-white px-5 py-3 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg hover:shadow-green-900/30">
-          <Plus size={20} /> Tambah Produk
-        </button>
-      </div>
-
-      {/* GRID KARTU PRODUK ALA RESTORAN */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {products.map((product) => (
-          <div key={product.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 flex flex-col relative group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
-            
-            {/* PLACEHOLDER GAMBAR BESAR */}
-            <div className="w-full h-48 bg-gray-100 relative flex items-center justify-center group-hover:bg-green-50 transition-colors">
-              <Coffee size={64} className="text-gray-300 group-hover:text-[#005432] transition-colors opacity-50" strokeWidth={1} />
-              
-              {/* BADGE TERSEDIA (Mengambang) */}
-              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Tersedia</span>
-              </div>
-            </div>
-
-            {/* INFORMASI PRODUK */}
-            <div className="p-6 flex-1 flex flex-col">
-              <h3 className="text-xl font-bold text-gray-900 leading-tight">{product.nama_produk}</h3>
-              <p className="text-xs text-gray-400 mt-1 mb-4">Lappo Signature Series</p>
-
-              {/* INFO RESEP */}
-              <div className="mb-6 bg-gray-50 group-hover:bg-green-50/50 p-4 rounded-2xl border border-gray-100/50 transition-colors">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Info size={14} className="text-[#005432]" />
-                  <span className="text-[10px] font-bold text-[#005432] uppercase tracking-wider">Komposisi Resep</span>
-                </div>
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  {product.ingredients?.length > 0 
-                    ? product.ingredients.map(r => `${r.pivot.jumlah_dibutuhkan}${r.satuan} ${r.nama_bahan}`).join(', ') 
-                    : <span className="italic text-red-400">Belum ada konfigurasi resep</span>}
-                </p>
-              </div>
-
-              {/* HARGA & TOMBOL EDIT */}
-              <div className="flex justify-between items-center mt-auto pt-2">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Harga Jual</p>
-                  <p className="font-black text-2xl text-gray-900">Rp {product.harga.toLocaleString('id-ID')}</p>
-                </div>
-                <button onClick={() => openModal(product)} className="w-12 h-12 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-[#005432] hover:text-white hover:scale-110 transition-all shadow-sm">
-                  <Edit2 size={18} />
-                </button>
-              </div>
-            </div>
-
+    <div className="relative min-h-screen font-sans pb-10">
+      {/* KONTEN DENGAN ANIMASI BUNGKUS TERPISAH */}
+      <div className={`space-y-8 p-2 transition-all duration-700 ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        
+        {/* HEADER */}
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Katalog Produk</h1>
+            <p className="text-gray-500 mt-1 text-sm">Manajemen Menu & Resep Otomatis</p>
           </div>
-        ))}
+          <button onClick={() => openModal()} className="flex items-center gap-2 bg-[#005432] text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-green-900 transition-all shadow-sm shadow-green-900/20">
+            <Plus size={18} /> Tambah Produk
+          </button>
+        </div>
+
+        {/* GRID KARTU PRODUK */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {products.map((product) => (
+            <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col relative group hover:border-[#005432]/30 hover:shadow-md transition-all duration-300 overflow-hidden">
+              <div className="w-full h-40 bg-gray-50 relative flex items-center justify-center group-hover:bg-[#005432]/5 transition-colors">
+                <Coffee size={48} className="text-gray-300 group-hover:text-[#005432]/50 transition-colors" strokeWidth={1.5} />
+                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm border border-gray-100">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-[10px] font-bold text-gray-700 uppercase tracking-widest">Tersedia</span>
+                </div>
+              </div>
+
+              <div className="p-5 flex-1 flex flex-col">
+                <h3 className="text-lg font-bold text-gray-900 leading-tight">{product.nama_produk}</h3>
+                <p className="text-xs text-gray-500 mt-1 mb-4">Lappo Signature Series</p>
+
+                <div className="mb-5 bg-gray-50 p-3.5 rounded-xl border border-gray-100 transition-colors">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <ShoppingBag size={12} className="text-[#005432]" />
+                    <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Komposisi Resep</span>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed font-medium">
+                    {product.ingredients?.length > 0 
+                      ? product.ingredients.map(r => `${r.pivot.jumlah_dibutuhkan}${r.satuan} ${r.nama_bahan}`).join(', ') 
+                      : <span className="italic text-red-400">Belum ada konfigurasi resep</span>}
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-end mt-auto pt-2 border-t border-gray-50">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Harga Jual</p>
+                    <p className="font-bold text-xl text-gray-900">Rp {product.harga.toLocaleString('id-ID')}</p>
+                  </div>
+                  <button onClick={() => openModal(product)} className="w-10 h-10 bg-gray-50 text-gray-500 rounded-lg border border-gray-100 flex items-center justify-center hover:bg-[#005432] hover:text-white hover:border-[#005432] transition-colors">
+                    <Edit2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* MODAL (Bentuknya tetap sama, aku hilangkan di sini biar kodenya gak kepanjangan, pakai punyamu saja untuk bagian MODAL) */}
+      {/* MODAL DI LUAR DIV ANIMASI AGAR FULL SCREEN */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={() => setIsModalOpen(false)}></div>
-          <div className="relative w-full max-w-2xl bg-white/95 backdrop-blur-2xl border border-white/50 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="bg-[#005432] p-6 text-white flex justify-between items-center">
-                <div><h2 className="text-xl font-black">{editingProduct ? 'Update Menu & Resep' : 'Buat Menu & Resep'}</h2><p className="text-green-200 text-xs">Lappo Intelligence System</p></div>
-                <button onClick={() => setIsModalOpen(false)} className="bg-white/20 p-2 rounded-full hover:bg-white/40 transition-colors"><X size={20} /></button>
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+          <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100">
+            
+            {/* HEADER MODAL PROFESIONAL */}
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div>
+                  <h2 className="text-lg font-bold text-gray-900">{editingProduct ? 'Update Menu & Resep' : 'Registrasi Menu Baru'}</h2>
+                  <p className="text-gray-500 text-xs mt-1">Lengkapi informasi produk dan takaran resep bahan baku.</p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 bg-white border border-gray-200 p-2 rounded-full shadow-sm transition-colors"><X size={16}/></button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto max-h-[80vh]">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[75vh]">
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100"><label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Nama Produk</label><input required value={formData.nama_produk} onChange={(e) => setFormData({...formData, nama_produk: e.target.value})} type="text" className="w-full bg-transparent border-none p-0 focus:ring-0 font-bold text-gray-800" /></div>
-                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100"><label className="block text-[10px] font-black text-gray-400 uppercase mb-1">Harga (Rp)</label><input required value={formData.harga} onChange={(e) => setFormData({...formData, harga: e.target.value})} type="number" className="w-full bg-transparent border-none p-0 focus:ring-0 font-bold text-gray-800" /></div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Nama Produk</label>
+                      <input required value={formData.nama_produk} onChange={(e) => setFormData({...formData, nama_produk: e.target.value})} type="text" placeholder="Masukkan nama..." className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Harga Jual (Rp)</label>
+                      <input required value={formData.harga} onChange={(e) => setFormData({...formData, harga: e.target.value})} type="number" placeholder="Contoh: 15000" className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] outline-none transition-all" />
+                    </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-3xl border-2 border-dashed border-gray-100">
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Konfigurasi Resep</h3>
-                    <div className="flex gap-3 mb-4">
-                        <select className="flex-1 bg-gray-50 border-none rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-[#005432]" value={tempIngredient.id} onChange={(e) => setTempIngredient({...tempIngredient, id: e.target.value})}>
-                            <option value="">Pilih Bahan...</option>
+                <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-200">
+                    <h3 className="text-sm font-bold text-gray-800 mb-4">Konfigurasi Takaran Resep</h3>
+                    
+                    <div className="flex gap-3 mb-5">
+                        <select className="flex-1 bg-white border border-gray-200 rounded-xl p-2.5 text-sm text-gray-700 focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] outline-none transition-all" value={tempIngredient.id} onChange={(e) => setTempIngredient({...tempIngredient, id: e.target.value})}>
+                            <option value="">Pilih Bahan Baku...</option>
                             {allIngredients.map(ing => <option key={ing.id} value={ing.id}>{ing.nama_bahan} ({ing.satuan})</option>)}
                         </select>
-                        <input type="number" placeholder="Qty" className="w-20 bg-gray-50 border-none rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-[#005432]" value={tempIngredient.qty} onChange={(e) => setTempIngredient({...tempIngredient, qty: e.target.value})} />
-                        <button type="button" onClick={addIngredientToRecipe} className="bg-[#005432] text-white p-3 rounded-xl hover:bg-black transition-all"><PlusCircle size={24} /></button>
+                        <input type="number" placeholder="Qty" className="w-24 bg-white border border-gray-200 rounded-xl p-2.5 text-sm text-gray-700 focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] outline-none transition-all" value={tempIngredient.qty} onChange={(e) => setTempIngredient({...tempIngredient, qty: e.target.value})} />
+                        <button type="button" onClick={addIngredientToRecipe} className="bg-gray-800 text-white px-4 rounded-xl hover:bg-[#005432] transition-all text-sm font-semibold flex items-center gap-2">
+                          <Plus size={16} /> Tambah
+                        </button>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
+                        {selectedIngredients.length === 0 && (
+                          <p className="text-xs text-center text-gray-400 py-3 italic">Belum ada bahan resep yang ditambahkan.</p>
+                        )}
                         {selectedIngredients.map((item, index) => (
-                            <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                <span className="text-sm font-bold text-gray-700">{item.nama}</span>
+                            <div key={index} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                                <span className="text-sm font-semibold text-gray-800">{item.nama}</span>
                                 <div className="flex items-center gap-4">
-                                    <span className="text-sm font-black text-[#005432]">{item.qty} {item.satuan}</span>
-                                    <button type="button" onClick={() => removeIngredientFromRecipe(index)} className="text-red-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
+                                    <span className="text-xs font-bold px-2 py-1 bg-gray-100 rounded-md text-gray-600">{item.qty} {item.satuan}</span>
+                                    <button type="button" onClick={() => removeIngredientFromRecipe(index)} className="text-red-400 hover:text-red-600 bg-red-50 p-1.5 rounded-lg transition-colors"><Trash2 size={14} /></button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <button type="submit" className="w-full bg-[#005432] text-white py-4 rounded-2xl font-black text-lg shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-3"><Save size={20} />{editingProduct ? 'Perbarui Menu & Resep' : 'Simpan Menu Baru'}</button>
+                <div className="pt-2">
+                  <button type="submit" className="w-full bg-[#005432] text-white py-3.5 rounded-xl font-bold hover:bg-green-900 transition-colors flex justify-center items-center gap-2">
+                    <Save size={18} /> {editingProduct ? 'Simpan Perubahan' : 'Buat Menu Sekarang'}
+                  </button>
+                </div>
             </form>
           </div>
         </div>
