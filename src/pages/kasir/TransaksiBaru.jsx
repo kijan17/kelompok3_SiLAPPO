@@ -35,7 +35,6 @@ const TransaksiKasir = () => {
           price: Number(p.harga),
           desc: 'Menu spesial dari Lappo Coffee. Diramu dengan bahan berkualitas tinggi.',
           category: 'Kopi', 
-          image: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=500&q=80',
           tags: ['Tersedia']
         }));
         setProducts(formattedProducts);
@@ -127,12 +126,10 @@ const TransaksiKasir = () => {
 
   return (
     <div className="relative min-h-screen font-sans">
-      {/* WRAPPER KONTEN (Pemisahan animasi agar modal bisa full screen) */}
       <div className={`flex flex-col xl:flex-row gap-6 transition-all duration-700 ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         
         {/* AREA KIRI: KATALOG PRODUK */}
         <div className="w-full xl:w-[65%] flex flex-col gap-6 pb-10">
-          
           <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200 pb-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Katalog <span className="text-[#005432]">Menu</span></h1>
@@ -147,7 +144,6 @@ const TransaksiKasir = () => {
             </div>
           </div>
 
-          {/* NOTIFIKASI PENGUNCIAN JIKA SHIFT BELUM MULAI */}
           {!isShiftActive && (
             <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-center gap-4 shadow-sm relative overflow-hidden">
               <div className="absolute left-0 top-0 w-2 h-full bg-red-500"></div>
@@ -174,40 +170,35 @@ const TransaksiKasir = () => {
             ))}
           </div>
 
-          {/* GRID PRODUK */}
+          {/* GRID PRODUK (Tanpa Gambar) */}
           {products.length === 0 ? (
              <div className="bg-white p-12 rounded-2xl border border-gray-200 text-center flex flex-col items-center justify-center text-gray-400 shadow-sm">
                 <Coffee size={48} className="mb-4 opacity-50" />
                 <p className="font-bold text-gray-500">Memuat katalog menu...</p>
              </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProducts.map((product) => (
-                <div key={product.id} className={`bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col transition-all ${!isShiftActive ? 'opacity-50 grayscale-[50%]' : 'hover:border-[#005432]/30 hover:shadow-md'}`}>
-                  <div className="flex gap-4 mb-4">
-                    <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-100">
-                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex flex-col justify-between py-1">
-                      <h4 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2">{product.name}</h4>
-                      <div>
-                        <p className="font-black text-[#005432] text-sm">Rp {product.price.toLocaleString('id-ID')}</p>
-                        <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${!isShiftActive ? 'bg-gray-100 text-gray-500' : 'bg-green-50 text-green-700'}`}>{product.tags[0]}</span>
-                      </div>
-                    </div>
+                <div key={product.id} className={`bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col h-full transition-all ${!isShiftActive ? 'opacity-50 grayscale-[50%]' : 'hover:border-[#005432]/40 hover:shadow-md'}`}>
+                  
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-bold text-gray-900 text-base leading-snug pr-3">{product.name}</h4>
+                    <span className={`shrink-0 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${!isShiftActive ? 'bg-gray-100 text-gray-500' : 'bg-green-50 text-[#005432] border border-green-100'}`}>{product.tags[0]}</span>
                   </div>
+                  
+                  <p className="font-black text-[#005432] text-lg mb-5">Rp {product.price.toLocaleString('id-ID')}</p>
                   
                   <div className="flex gap-2 mt-auto">
                     <button 
                       onClick={() => addToCart(product)} 
                       disabled={!isShiftActive}
-                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border
-                        ${isShiftActive ? 'bg-white border-[#005432] text-[#005432] hover:bg-[#005432] hover:text-white' : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}`}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors border
+                        ${isShiftActive ? 'bg-[#005432] border-[#005432] text-white hover:bg-green-900 hover:border-green-900' : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}`}
                     >
-                      <Plus size={14} strokeWidth={3}/> Tambah
+                      <Plus size={16} strokeWidth={2.5}/> Tambah
                     </button>
-                    <button onClick={() => openDetailModal(product)} className="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-600 rounded-xl border border-gray-200 hover:bg-gray-100 hover:text-[#005432] transition-colors">
-                      <FileText size={16} />
+                    <button onClick={() => openDetailModal(product)} className="w-11 h-11 flex items-center justify-center bg-gray-50 text-gray-600 rounded-xl border border-gray-200 hover:bg-gray-100 hover:text-[#005432] transition-colors">
+                      <FileText size={18} />
                     </button>
                   </div>
                 </div>
@@ -216,7 +207,7 @@ const TransaksiKasir = () => {
           )}
         </div>
 
-        {/* AREA KANAN: KERANJANG */}
+        {/* AREA KANAN: KERANJANG (Tetap sama) */}
         <div className="w-full xl:w-[35%]">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col h-[calc(100vh-2.5rem)] sticky top-5">
             <h3 className="text-lg font-bold text-gray-900 mb-5 border-b border-gray-100 pb-4 flex items-center gap-2">
@@ -283,20 +274,19 @@ const TransaksiKasir = () => {
         </div>
       </div>
 
-      {/* MODAL DI LUAR DIV ANIMASI AGAR BISA FULL SCREEN */}
+      {/* MODAL DI LUAR DIV ANIMASI */}
       {isDetailModalOpen && selectedProduct && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setIsDetailModalOpen(false)}></div>
-          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100">
-            <button onClick={() => setIsDetailModalOpen(false)} className="absolute top-4 right-4 bg-white/80 backdrop-blur-md text-gray-800 p-2 rounded-full shadow-sm hover:bg-white transition-colors z-10"><X size={18} /></button>
-            <div className="w-full h-56 bg-gray-100 relative">
-              <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" />
-              <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100">
+            <div className="p-6 bg-gray-50 flex justify-between items-center border-b border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900">Detail Menu</h2>
+                <button onClick={() => setIsDetailModalOpen(false)} className="bg-white text-gray-500 p-1.5 rounded-full shadow-sm hover:text-gray-800 transition-colors"><X size={18} /></button>
             </div>
-            <div className="p-6 relative -mt-6 bg-white rounded-t-3xl">
-              <div className="flex justify-between items-start mb-3">
-                <h2 className="text-xl font-bold text-gray-900 pr-4">{selectedProduct.name}</h2>
-                <span className="bg-green-50 text-[#005432] border border-green-100 px-2.5 py-1 rounded-lg font-bold text-sm whitespace-nowrap">Rp {selectedProduct.price.toLocaleString('id-ID')}</span>
+            <div className="p-6 bg-white">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedProduct.name}</h2>
+                <span className="inline-block bg-green-50 text-[#005432] border border-green-100 px-2.5 py-1 rounded-lg font-bold text-sm">Rp {selectedProduct.price.toLocaleString('id-ID')}</span>
               </div>
               <p className="text-sm text-gray-500 mb-6 leading-relaxed font-medium">{selectedProduct.desc}</p>
               

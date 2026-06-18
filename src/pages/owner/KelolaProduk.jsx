@@ -106,7 +106,6 @@ const KelolaProduk = () => {
 
   return (
     <div className="relative min-h-screen font-sans pb-10">
-      {/* KONTEN DENGAN ANIMASI BUNGKUS TERPISAH */}
       <div className={`space-y-8 p-2 transition-all duration-700 ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         
         {/* HEADER */}
@@ -120,56 +119,54 @@ const KelolaProduk = () => {
           </button>
         </div>
 
-        {/* GRID KARTU PRODUK */}
+        {/* GRID KARTU PRODUK (Tanpa Ruang Gambar) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
-            <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col relative group hover:border-[#005432]/30 hover:shadow-md transition-all duration-300 overflow-hidden">
-              <div className="w-full h-40 bg-gray-50 relative flex items-center justify-center group-hover:bg-[#005432]/5 transition-colors">
-                <Coffee size={48} className="text-gray-300 group-hover:text-[#005432]/50 transition-colors" strokeWidth={1.5} />
-                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm border border-gray-100">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-[10px] font-bold text-gray-700 uppercase tracking-widest">Tersedia</span>
+            <div key={product.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col relative group hover:border-[#005432]/30 hover:shadow-md transition-all duration-300">
+              
+              <div className="flex justify-between items-start mb-4">
+                <div className="pr-4">
+                  <h3 className="text-xl font-bold text-gray-900 leading-tight">{product.nama_produk}</h3>
+                  <p className="text-xs font-medium text-gray-400 mt-1 uppercase tracking-wider">Lappo Signature Series</p>
+                </div>
+                <div className="bg-green-50 border border-green-100 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#005432] animate-pulse"></div>
+                  <span className="text-[10px] font-bold text-[#005432] uppercase tracking-widest">Tersedia</span>
                 </div>
               </div>
 
-              <div className="p-5 flex-1 flex flex-col">
-                <h3 className="text-lg font-bold text-gray-900 leading-tight">{product.nama_produk}</h3>
-                <p className="text-xs text-gray-500 mt-1 mb-4">Lappo Signature Series</p>
-
-                <div className="mb-5 bg-gray-50 p-3.5 rounded-xl border border-gray-100 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <ShoppingBag size={12} className="text-[#005432]" />
-                    <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Komposisi Resep</span>
-                  </div>
-                  <p className="text-xs text-gray-500 leading-relaxed font-medium">
-                    {product.ingredients?.length > 0 
-                      ? product.ingredients.map(r => `${r.pivot.jumlah_dibutuhkan}${r.satuan} ${r.nama_bahan}`).join(', ') 
-                      : <span className="italic text-red-400">Belum ada konfigurasi resep</span>}
-                  </p>
+              <div className="mb-6 bg-gray-50/80 p-4 rounded-2xl border border-gray-100 transition-colors flex-1">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <ShoppingBag size={14} className="text-[#005432]" />
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Komposisi Resep</span>
                 </div>
+                <p className="text-sm text-gray-600 leading-relaxed font-medium">
+                  {product.ingredients?.length > 0 
+                    ? product.ingredients.map(r => `${r.pivot.jumlah_dibutuhkan}${r.satuan} ${r.nama_bahan}`).join(' • ') 
+                    : <span className="italic text-red-400 text-xs">Belum ada konfigurasi resep.</span>}
+                </p>
+              </div>
 
-                <div className="flex justify-between items-end mt-auto pt-2 border-t border-gray-50">
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Harga Jual</p>
-                    <p className="font-bold text-xl text-gray-900">Rp {product.harga.toLocaleString('id-ID')}</p>
-                  </div>
-                  <button onClick={() => openModal(product)} className="w-10 h-10 bg-gray-50 text-gray-500 rounded-lg border border-gray-100 flex items-center justify-center hover:bg-[#005432] hover:text-white hover:border-[#005432] transition-colors">
-                    <Edit2 size={16} />
-                  </button>
+              <div className="flex justify-between items-end mt-auto pt-4 border-t border-gray-100">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Harga Jual</p>
+                  <p className="font-black text-2xl text-[#005432]">Rp {product.harga.toLocaleString('id-ID')}</p>
                 </div>
+                <button onClick={() => openModal(product)} className="w-11 h-11 bg-white text-gray-500 rounded-xl border-2 border-gray-100 flex items-center justify-center hover:bg-[#005432] hover:text-white hover:border-[#005432] transition-colors shadow-sm">
+                  <Edit2 size={16} strokeWidth={2.5} />
+                </button>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* MODAL DI LUAR DIV ANIMASI AGAR FULL SCREEN */}
+      {/* MODAL (Tetap sama) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
           <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100">
             
-            {/* HEADER MODAL PROFESIONAL */}
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <div>
                   <h2 className="text-lg font-bold text-gray-900">{editingProduct ? 'Update Menu & Resep' : 'Registrasi Menu Baru'}</h2>
