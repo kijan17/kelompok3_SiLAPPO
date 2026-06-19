@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Coffee, Milk, Droplet, Package, X, Save, ShoppingCart, TrendingDown, TrendingUp, Layers } from 'lucide-react';
+import { Plus, Edit, Trash2, Coffee, Milk, Droplet, Package, X, Save, ShoppingCart, TrendingDown, TrendingUp, Layers, AlertCircle, CheckCircle2, Search } from 'lucide-react';
 
 const StokBahan = () => {
   const [ingredients, setIngredients] = useState([]);
@@ -15,6 +15,20 @@ const StokBahan = () => {
 
   const [isContentMounted, setIsContentMounted] = useState(false);
 
+  // STATE UNTUK PENCARIAN
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [ingredientToDelete, setIngredientToDelete] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   useEffect(() => {
     setTimeout(() => { setIsContentMounted(true); }, 100);
     fetchIngredients();
@@ -22,11 +36,17 @@ const StokBahan = () => {
   }, []);
 
   const fetchIngredients = () => {
-    fetch('http://127.0.0.1:8000/api/ingredients').then(res => res.json()).then(data => { if (data.success) setIngredients(data.data); });
+    fetch('http://127.0.0.1:8000/api/ingredients')
+      .then(res => res.json())
+      .then(data => { if (data.success) setIngredients(data.data); })
+      .catch(() => showToast("Gagal mengambil data stok bahan baku.", "error"));
   };
 
   const fetchRestockHistory = () => {
-    fetch('http://127.0.0.1:8000/api/restocks').then(res => res.json()).then(data => { if (data.success) setRestockHistory(data.data); });
+    fetch('http://127.0.0.1:8000/api/restocks')
+      .then(res => res.json())
+      .then(data => { if (data.success) setRestockHistory(data.data); })
+      .catch(() => showToast("Gagal mengambil riwayat restock.", "error"));
   };
 
   const openModal = (ingredient = null) => {
@@ -50,8 +70,19 @@ const StokBahan = () => {
     e.preventDefault();
     const method = editingIngredient ? 'PUT' : 'POST';
     const url = editingIngredient ? `http://127.0.0.1:8000/api/ingredients/${editingIngredient.id}` : 'http://127.0.0.1:8000/api/ingredients';
+    
     fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(formData) })
-      .then(res => res.json()).then(data => { if (data.success) { setIsModalOpen(false); fetchIngredients(); } });
+      .then(res => res.json())
+      .then(data => { 
+        if (data.success) { 
+          setIsModalOpen(false); 
+          fetchIngredients(); 
+          showToast(editingIngredient ? "Data bahan baku berhasil diperbarui!" : "Bahan baku baru berhasil ditambahkan!", "success");
+        } else {
+          showToast("Gagal menyimpan data: " + data.message, "error");
+        }
+      })
+      .catch(() => showToast("Terjadi kesalahan koneksi ke server.", "error"));
   };
 
   const handleSubmitRestock = (e) => {
@@ -60,16 +91,43 @@ const StokBahan = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ ingredient_id: selectedForRestock.id, jumlah_tambah: parseInt(restockFormData.jumlah_tambah), total_harga: parseInt(restockFormData.total_harga) })
-    }).then(res => res.json()).then(data => {
-      if (data.success) { setIsRestockModalOpen(false); fetchIngredients(); fetchRestockHistory(); } 
-      else { alert("Gagal menyimpan: " + JSON.stringify(data.message)); }
-    });
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) { 
+        setIsRestockModalOpen(false); 
+        fetchIngredients(); 
+        fetchRestockHistory(); 
+        showToast(`Berhasil menambah stok ${selectedForRestock.nama_bahan}!`, "success");
+      } else { 
+        showToast("Gagal memproses restock: " + (data.message || "Error tidak diketahui"), "error"); 
+      }
+    })
+    .catch(() => showToast("Terjadi kesalahan koneksi ke server.", "error"));
   };
 
-  const handleDelete = (id, nama) => {
-    if(window.confirm(`Yakin menghapus bahan baku ${nama}?`)) {
-      fetch(`http://127.0.0.1:8000/api/ingredients/${id}`, { method: 'DELETE' }).then(res => res.json()).then(data => { if(data.success) fetchIngredients(); });
-    }
+  const handleDeleteClick = (id, nama) => {
+    setIngredientToDelete({ id, nama });
+    setIsConfirmDeleteOpen(true);
+  };
+
+  const executeDelete = () => {
+    if (!ingredientToDelete) return;
+
+    fetch(`http://127.0.0.1:8000/api/ingredients/${ingredientToDelete.id}`, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(data => { 
+        if(data.success) {
+          fetchIngredients(); 
+          showToast(`Bahan ${ingredientToDelete.nama} berhasil dihapus.`, "success");
+        } else {
+          showToast("Gagal menghapus bahan: " + data.message, "error");
+        }
+      })
+      .catch(() => showToast("Terjadi kesalahan koneksi ke server.", "error"));
+      
+    setIsConfirmDeleteOpen(false);
+    setIngredientToDelete(null);
   };
 
   const getStyling = (nama_bahan) => {
@@ -80,23 +138,55 @@ const StokBahan = () => {
     return { icon: <Package size={24} className="text-white" />, gradient: 'from-blue-500 to-indigo-600', badgeColor: 'bg-blue-100 text-blue-700', category: 'Lainnya' };
   };
 
+  // LOGIKA PENCARIAN BAHAN BAKU
+  const filteredIngredients = ingredients.filter(i =>
+    i.nama_bahan.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const totalExpenses = restockHistory.reduce((sum, item) => sum + parseInt(item.total_harga || 0), 0);
 
   return (
-    <div className="font-sans relative min-h-screen pb-10">
+    <div className="font-sans relative min-h-screen pb-10 overflow-hidden">
       
-      {/* KONTEN DENGAN ANIMASI BUNGKUS TERPISAH */}
+      {/* TOAST NOTIFICATION */}
+      <div className={`fixed top-6 right-6 z-[9999] transition-all duration-500 transform ${toast.visible ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-20 opacity-0 scale-95 pointer-events-none'}`}>
+        <div className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border ${toast.type === 'success' ? 'bg-white border-green-100' : 'bg-white border-red-100'}`}>
+          <div className={`p-2 rounded-full shrink-0 ${toast.type === 'success' ? 'bg-green-50 text-[#005432]' : 'bg-red-50 text-red-600'}`}>
+            {toast.type === 'success' ? <CheckCircle2 size={20} strokeWidth={2.5} /> : <AlertCircle size={20} strokeWidth={2.5} />}
+          </div>
+          <div className="pr-2">
+            <p className={`text-sm font-bold ${toast.type === 'success' ? 'text-gray-900' : 'text-red-700'}`}>
+              {toast.type === 'success' ? 'Berhasil!' : 'Peringatan Sistem'}
+            </p>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">{toast.message}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* KONTEN UTAMA */}
       <div className={`space-y-6 transition-all duration-700 ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-6 border-b border-gray-100 pb-4">
+        {/* HEADER DENGAN SEARCH BAR */}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-6 border-b border-gray-100 pb-5">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Stok Bahan Baku</h1>
             <p className="text-gray-500 mt-1 text-sm">Kelola persediaan dan pencatatan pengeluaran modal (Restock).</p>
           </div>
-          <button onClick={() => openModal()} className="flex items-center justify-center gap-2 bg-[#005432] text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-green-900 transition-all shadow-sm shadow-green-900/20">
-            <Plus size={18} /> Tambah Jenis Bahan
-          </button>
+          <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Cari nama bahan baku..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] outline-none transition-all shadow-sm"
+              />
+            </div>
+            <button onClick={() => openModal()} className="flex items-center justify-center gap-2 bg-[#005432] text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-green-900 transition-all shadow-sm shadow-green-900/20 shrink-0">
+              <Plus size={18} /> Tambah Jenis Bahan
+            </button>
+          </div>
         </div>
 
         {/* SUMMARY DASHBOARD KECIL */}
@@ -128,59 +218,69 @@ const StokBahan = () => {
         </div>
 
         {/* GRID KARTU STOK */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {ingredients.map((item) => {
-            const style = getStyling(item.nama_bahan);
-            const stockLevel = Math.min(Math.round((item.stok / 10000) * 100), 100); 
-            const status = item.stok > 1000 ? 'Stok Aman' : 'Stok Menipis';
-
-            return (
-              <div key={item.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 flex flex-col hover:border-[#005432]/30 hover:shadow-md transition-all duration-300">
-                <div className="flex items-start gap-4 mb-5">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm bg-gradient-to-br ${style.gradient}`}>
-                    {style.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base leading-tight mb-1">{item.nama_bahan}</h3>
-                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{style.category}</p>
-                  </div>
-                </div>
-
-                <div className="mb-5">
-                  <div className="flex justify-between items-end mb-2">
-                    <h2 className="text-2xl font-bold text-gray-800">{stockLevel}%</h2>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${style.badgeColor}`}>
-                      {status}
-                    </span>
-                  </div>
-                  
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full bg-gradient-to-r ${style.gradient} rounded-full`} style={{ width: `${stockLevel}%` }}></div>
-                  </div>
-                  
-                  <p className="text-xs font-bold text-gray-500 mt-2 text-right">
-                    {item.stok} <span className="font-medium text-gray-400">{item.satuan}</span>
-                  </p>
-                </div>
-
-                <div className="flex gap-2 mt-auto pt-4 border-t border-gray-50">
-                  <button onClick={() => openRestockModal(item)} className="flex-1 bg-gray-800 text-white py-2 rounded-lg hover:bg-[#005432] transition-colors flex items-center justify-center gap-1.5 font-semibold text-xs">
-                    <ShoppingCart size={14} /> Beli Restock
-                  </button>
-                  <button onClick={() => openModal(item)} className="w-9 h-9 bg-gray-50 text-gray-500 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-[#005432] hover:text-white hover:border-[#005432] transition-colors">
-                    <Edit size={14} />
-                  </button>
-                  <button onClick={() => handleDelete(item.id, item.nama_bahan)} className="w-9 h-9 bg-red-50 text-red-500 rounded-lg border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+        {filteredIngredients.length === 0 ? (
+           <div className="bg-white p-16 rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-400">
+                <Search size={32} />
               </div>
-            );
-          })}
-        </div>
+              <h3 className="text-lg font-bold text-gray-900">Bahan Baku Tidak Ditemukan</h3>
+              <p className="text-gray-500 text-sm mt-1">Coba gunakan kata kunci lain atau tambahkan bahan baru.</p>
+           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredIngredients.map((item) => {
+              const style = getStyling(item.nama_bahan);
+              const stockLevel = Math.min(Math.round((item.stok / 10000) * 100), 100); 
+              const status = item.stok > 1000 ? 'Stok Aman' : 'Stok Menipis';
+
+              return (
+                <div key={item.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 flex flex-col hover:border-[#005432]/30 hover:shadow-md transition-all duration-300">
+                  <div className="flex items-start gap-4 mb-5">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm bg-gradient-to-br ${style.gradient}`}>
+                      {style.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base leading-tight mb-1">{item.nama_bahan}</h3>
+                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{style.category}</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-5">
+                    <div className="flex justify-between items-end mb-2">
+                      <h2 className="text-2xl font-bold text-gray-800">{stockLevel}%</h2>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${style.badgeColor}`}>
+                        {status}
+                      </span>
+                    </div>
+                    
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full bg-gradient-to-r ${style.gradient} rounded-full`} style={{ width: `${stockLevel}%` }}></div>
+                    </div>
+                    
+                    <p className="text-xs font-bold text-gray-500 mt-2 text-right">
+                      {item.stok} <span className="font-medium text-gray-400">{item.satuan}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 mt-auto pt-4 border-t border-gray-50">
+                    <button onClick={() => openRestockModal(item)} className="flex-1 bg-gray-800 text-white py-2 rounded-lg hover:bg-[#005432] transition-colors flex items-center justify-center gap-1.5 font-semibold text-xs shadow-sm">
+                      <ShoppingCart size={14} /> Beli Restock
+                    </button>
+                    <button onClick={() => openModal(item)} className="w-9 h-9 bg-white text-gray-500 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-[#005432] hover:text-white hover:border-[#005432] transition-colors shadow-sm">
+                      <Edit size={14} />
+                    </button>
+                    <button onClick={() => handleDeleteClick(item.id, item.nama_bahan)} className="w-9 h-9 bg-white text-red-400 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors shadow-sm">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* MODAL 1: TAMBAH/EDIT BAHAN (TAMPIL FULL SCREEN KARENA DILUAR DIV TRANSFORM) */}
+      {/* MODAL 1: TAMBAH/EDIT BAHAN (SAMA SEPERTI SEBELUMNYA) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
@@ -215,7 +315,7 @@ const StokBahan = () => {
               </div>
 
               <div className="pt-2">
-                <button type="submit" className="w-full bg-[#005432] text-white py-3.5 rounded-xl font-bold hover:bg-green-900 transition-colors flex justify-center items-center gap-2">
+                <button type="submit" className="w-full bg-[#005432] text-white py-3.5 rounded-xl font-bold hover:bg-green-900 transition-colors flex justify-center items-center gap-2 shadow-sm">
                   <Save size={18} /> Simpan Data Bahan
                 </button>
               </div>
@@ -224,7 +324,7 @@ const StokBahan = () => {
         </div>
       )}
 
-      {/* MODAL 2: RESTOCK LOG */}
+      {/* MODAL 2: RESTOCK LOG (SAMA SEPERTI SEBELUMNYA) */}
       {isRestockModalOpen && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setIsRestockModalOpen(false)}></div>
@@ -253,6 +353,30 @@ const StokBahan = () => {
                   </button>
                 </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: KONFIRMASI HAPUS BAHAN BAKU (SAMA SEPERTI SEBELUMNYA) */}
+      {isConfirmDeleteOpen && ingredientToDelete && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setIsConfirmDeleteOpen(false)}></div>
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100 p-6 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+              <Trash2 size={28} strokeWidth={2.5} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900 mb-2">Hapus Bahan Baku?</h2>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              Anda yakin ingin menghapus <span className="font-bold text-gray-800">{ingredientToDelete.nama}</span> dari inventaris? Aksi ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setIsConfirmDeleteOpen(false)} className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors">
+                Batal
+              </button>
+              <button onClick={executeDelete} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-red-600 transition-colors shadow-sm">
+                Ya, Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}

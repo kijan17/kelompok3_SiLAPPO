@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, AlertCircle } from 'lucide-react'; // Tambahkan import icon
 
 // Pastikan lokasi import logo ini sesuai dengan letak folder assets kamu
 import LappoLogo from '../../assets/LappoLogo.jpg'; 
@@ -12,8 +13,20 @@ const Login = () => {
   // STATE UNTUK ANIMASI PINTU TERBUKA
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // STATE KHUSUS UNTUK POP-UP NOTIFIKASI (TOAST)
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
+
+  // FUNGSI PEMANGGIL NOTIFIKASI
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+    // Otomatis hilang setelah 3 detik
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   const handleLogin = async (e) => {
-    if (e) e.preventDefault(); // Jaga-jaga mencegah reload bawaan browser
+    if (e) e.preventDefault(); 
     
     const inputUsername = username.trim();
     
@@ -22,11 +35,18 @@ const Login = () => {
       localStorage.setItem('role', 'owner');
       localStorage.setItem('kasir_name', 'Owner Lappo');
       
-      // Jalankan Animasi
-      setIsAnimating(true);
+      // 🔥 TRIK JITU: Kosongkan password & username seketika 
+      // agar tidak terdeteksi sebagai kebocoran data oleh Google Chrome
+      setUsername('');
+      setPassword('');
+      
+      showToast("Selamat datang, Owner Lappo!", "success");
+      
+      // Jeda 1 detik agar toast terbaca, baru jalankan animasi pintu
       setTimeout(() => {
-        navigate('/dashboardOwner'); 
-      }, 700); // Tunggu 700ms sampai pintu terbuka
+        setIsAnimating(true);
+        setTimeout(() => navigate('/dashboardOwner'), 700); 
+      }, 1000);
       return;
     }
 
@@ -51,27 +71,43 @@ const Login = () => {
         localStorage.setItem('kasir_name', data.data.nama_lengkap);
         localStorage.setItem('kasir_id', data.data.id);
         
-        alert(`Selamat datang, ${data.data.nama_lengkap}! Status Anda kini: Sedang Jaga.`);
+        // Ganti alert dengan showToast
+        showToast(`Selamat datang, ${data.data.nama_lengkap}! Status Anda kini: Sedang Jaga.`, "success");
         
-        // Jalankan Animasi setelah alert ditutup
-        setIsAnimating(true);
+        // Jeda 1.5 detik agar tulisan terbaca, lalu jalankan animasi
         setTimeout(() => {
-          navigate('/dashboardKasir'); 
-        }, 700);
+          setIsAnimating(true);
+          setTimeout(() => navigate('/dashboardKasir'), 700);
+        }, 1500);
 
       } else {
-        alert("Gagal Login: " + data.message);
+        // Notifikasi error jika password/username salah
+        showToast("Gagal Login: " + data.message, "error");
       }
     } catch (error) {
       console.error("Error Login:", error);
-      alert("Tidak dapat terhubung ke server. Pastikan server Laravel sudah dinyalakan!");
+      showToast("Tidak dapat terhubung ke server. Pastikan server Laravel sudah dinyalakan!", "error");
     }
   };
 
   return (
-    // overflow-hidden mencegah munculnya scrollbar saat pintu bergeser keluar layar
-    <div className="min-h-screen flex font-sans overflow-hidden bg-gray-50">
+    <div className="min-h-screen flex font-sans overflow-hidden bg-gray-50 relative">
       
+      {/* TOAST NOTIFICATION POP-UP */}
+      <div className={`fixed top-6 right-6 z-[9999] transition-all duration-500 transform ${toast.visible ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-20 opacity-0 scale-95 pointer-events-none'}`}>
+        <div className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border ${toast.type === 'success' ? 'bg-white border-green-100' : 'bg-white border-red-100'}`}>
+          <div className={`p-2 rounded-full shrink-0 ${toast.type === 'success' ? 'bg-green-50 text-[#005432]' : 'bg-red-50 text-red-600'}`}>
+            {toast.type === 'success' ? <CheckCircle2 size={20} strokeWidth={2.5} /> : <AlertCircle size={20} strokeWidth={2.5} />}
+          </div>
+          <div className="pr-2">
+            <p className={`text-sm font-bold ${toast.type === 'success' ? 'text-gray-900' : 'text-red-700'}`}>
+              {toast.type === 'success' ? 'Berhasil Login!' : 'Peringatan Sistem'}
+            </p>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">{toast.message}</p>
+          </div>
+        </div>
+      </div>
+
       {/* BAGIAN KIRI: Background Hijau & Logo */}
       <div 
         className={`hidden lg:flex flex-col justify-center items-center w-1/2 bg-[#005432] z-10 transition-transform duration-700 ease-in-out ${
@@ -91,7 +127,6 @@ const Login = () => {
           isAnimating ? 'translate-x-full' : 'translate-x-0'
         }`}
       >
-        
         <div className="w-full max-w-md mx-auto">
           {/* Header */}
           <div className="mb-10">
@@ -99,9 +134,7 @@ const Login = () => {
             <p className="text-lg text-gray-800 font-semibold">Selamat datang kembali</p>
           </div>
 
-          {/* MENGGUNAKAN DIV SEBAGAI PENGGANTI FORM UNTUK MENGAKALI CHROME */}
           <div className="space-y-6">
-            
             {/* Input Username */}
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">
@@ -150,11 +183,15 @@ const Login = () => {
           </div>
 
           {/* Note kecil untuk pengujian */}
-          <p className="text-xs text-center text-gray-400 mt-8">
-            *Ketik <b>owner</b> untuk akses Owner, atau gunakan <b>Username Kasir</b> yang telah didaftarkan.
-          </p>
+         <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+            <p className="text-xs text-gray-500 font-medium">
+              Sistem Informasi Internal Lappo Coffee &copy; 2026
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1">
+              Akses sistem ini terbatas hanya untuk staf yang memiliki otorisasi.
+            </p>
+          </div>
         </div>
-
       </div>
     </div>
   );

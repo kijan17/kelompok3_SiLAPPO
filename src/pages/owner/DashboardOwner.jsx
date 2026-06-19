@@ -16,6 +16,7 @@ const DashboardOwner = () => {
         if (res.success) setData(res.data);
         setLoading(false);
         
+        // Memicu animasi setelah data selesai di-load
         setTimeout(() => {
             setIsContentMounted(true);
         }, 100);
@@ -44,14 +45,10 @@ const DashboardOwner = () => {
   };
 
   return (
-    <div 
-      className={`space-y-6 font-sans relative min-h-screen pb-10 transition-all duration-700 ease-out transform ${
-        isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-      }`}
-    >
+    <div className="space-y-6 font-sans relative min-h-screen pb-10">
       
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-100 pb-4">
+      {/* HEADER SECTION (Langsung Muncul) */}
+      <div className={`flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-100 pb-4 transition-all duration-700 ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Selamat Datang, <span className="text-[#005432]">Owner</span></h1>
           <p className="text-gray-500 mt-1 text-sm">Pantau performa harian dan metrik operasional Lappo Coffee.</p>
@@ -61,8 +58,8 @@ const DashboardOwner = () => {
       {/* TOP WIDGETS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* WIDGET 1: FINANCIAL METRICS (Digabung jadi satu area agar lebih rapi) */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
+        {/* WIDGET 1: FINANCIAL METRICS (Meluncur Pertama - Delay 150ms) */}
+        <div className={`lg:col-span-1 flex flex-col gap-4 transition-all duration-[1000ms] delay-[150ms] ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           {/* Pendapatan Card */}
           <div 
             onClick={() => navigate('/laporan')} 
@@ -110,8 +107,8 @@ const DashboardOwner = () => {
           </div>
         </div>
 
-        {/* WIDGET 2: Perform Staff */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col">
+        {/* WIDGET 2: Perform Staff (Meluncur Kedua - Delay 300ms) */}
+        <div className={`bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col transition-all duration-[1000ms] delay-[300ms] ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-3">
             <div className="flex items-center gap-2">
               <Users size={18} className="text-blue-500" />
@@ -139,10 +136,10 @@ const DashboardOwner = () => {
           </div>
         </div>
 
-        {/* WIDGET 3: Stok Menipis */}
+        {/* WIDGET 3: Stok Menipis (Meluncur Ketiga - Delay 450ms) */}
         <div 
-            onClick={() => navigate('/stok-bahan')} 
-            className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm cursor-pointer hover:border-red-300 transition-all flex flex-col group"
+          onClick={() => navigate('/stok-bahan')} 
+          className={`bg-white p-5 rounded-2xl border border-gray-200 shadow-sm cursor-pointer hover:border-red-300 transition-all flex flex-col group transition-all duration-[1000ms] delay-[450ms] ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
         >
           <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-3">
             <div className="flex items-center gap-2">
@@ -154,49 +151,49 @@ const DashboardOwner = () => {
           
           <div className="space-y-3 flex-1">
             {data.lowStock.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-4">
-                  <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-2">
-                    <CheckCircle2 size={24} className="text-green-500" />
-                  </div>
-                  <p className="text-sm font-semibold text-gray-600">Semua stok aman</p>
-                  <p className="text-xs text-gray-400 mt-1">Belum ada bahan baku yang perlu di-restock.</p>
+              <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-2">
+                  <CheckCircle2 size={24} className="text-green-500" />
                 </div>
+                <p className="text-sm font-semibold text-gray-600">Semua stok aman</p>
+                <p className="text-xs text-gray-400 mt-1">Belum ada bahan baku yang perlu di-restock.</p>
+              </div>
             ) : (
-                data.lowStock.map((item, index) => (
+              data.lowStock.map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-red-50/50 border border-red-100 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
-                        <AlertTriangle size={16} />
-                      </div>
-                      <h4 className="font-semibold text-gray-800 text-sm">{item.name}</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+                      <AlertTriangle size={16} />
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-gray-500 mb-0.5">Sisa Stok</p>
-                      <p className="text-sm font-bold text-red-600">{item.sisa}</p>
-                    </div>
+                    <h4 className="font-semibold text-gray-800 text-sm">{item.name}</h4>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 mb-0.5">Sisa Stok</p>
+                    <p className="text-sm font-bold text-red-600">{item.sisa}</p>
+                  </div>
                 </div>
-                ))
+              ))
             )}
           </div>
         </div>
 
       </div>
 
-      {/* CHART SECTION: Tren Pendapatan */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+      {/* CHART SECTION: Tren Pendapatan (Meluncur Terakhir - Delay 600ms) */}
+      <div className={`bg-white p-6 rounded-2xl border border-gray-200 shadow-sm transition-all duration-[1000ms] delay-[600ms] ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <div className="flex justify-between items-start mb-6">
-            <div>
-                <h3 className="font-bold text-gray-900 text-lg">Tren Pendapatan Mingguan</h3>
-                <p className="text-sm text-gray-500 mt-1">Perbandingan omzet 7 hari terakhir (dalam Juta Rupiah)</p>
+          <div>
+            <h3 className="font-bold text-gray-900 text-lg">Tren Pendapatan Mingguan</h3>
+            <p className="text-sm text-gray-500 mt-1">Perbandingan omzet 7 hari terakhir (dalam Juta Rupiah)</p>
+          </div>
+          <div className="flex gap-4 items-center">
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+              <span className="w-3 h-3 rounded-full bg-[#fbbf24]"></span> Minggu Lalu
             </div>
-            <div className="flex gap-4 items-center">
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                <span className="w-3 h-3 rounded-full bg-[#fbbf24]"></span> Minggu Lalu
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                <span className="w-3 h-3 rounded-full bg-[#005432]"></span> Minggu Ini
-              </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+              <span className="w-3 h-3 rounded-full bg-[#005432]"></span> Minggu Ini
             </div>
+          </div>
         </div>
         
         <div className="w-full h-[320px] mt-4">

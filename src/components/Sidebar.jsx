@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Layers, Users, FileText, ShoppingCart, LogOut, Receipt } from 'lucide-react';
+// Jangan lupa kita panggil AlertCircle di sini
+import { LayoutDashboard, Package, Layers, Users, FileText, ShoppingCart, LogOut, Receipt, AlertCircle } from 'lucide-react';
 import LappoLogo from '../assets/LappoLogo.jpg'; 
 
 const Sidebar = () => {
@@ -9,6 +10,9 @@ const Sidebar = () => {
 
   // STATE UNTUK ANIMASI MUNCUL
   const [isMounted, setIsMounted] = useState(false);
+  
+  // STATE UNTUK POP-UP WARNING SHIFT
+  const [showShiftWarning, setShowShiftWarning] = useState(false);
 
   useEffect(() => {
     // Saat sidebar pertama kali dirender, nyalakan animasi masuknya!
@@ -36,13 +40,14 @@ const Sidebar = () => {
 
   const activeMenus = isOwner ? menuOwner : menuKasir;
 
- const handleLogout = () => {
+  const handleLogout = () => {
     // Cek apakah kasir yang sedang login masih punya shift aktif
     const kasirId = localStorage.getItem('kasir_id');
     const isShiftActive = localStorage.getItem(`is_shift_active_${kasirId}`);
 
     if (isShiftActive === 'true') {
-      alert("⚠️ GAGAL LOGOUT: Anda masih dalam sesi shift aktif!\n\nSilakan kembali ke Dashboard Kasir dan klik 'Akhiri Sesi Shift' terlebih dahulu sebelum keluar.");
+      // Buka Pop-up Cantik kita alih-alih pakai alert()
+      setShowShiftWarning(true);
       return; // Hentikan proses logout
     }
 
@@ -54,60 +59,93 @@ const Sidebar = () => {
     }, 300);
   };
 
+  // KITA BUNGKUS DENGAN FRAGMENT (<> ... </>) AGAR MODAL BISA FULL SCREEN
   return (
-    <div 
-      className={`w-64 bg-white border-r border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm font-sans z-50 transform transition-transform duration-700 ease-out ${
-        isMounted ? 'translate-x-0' : '-translate-x-full'
-      }`}
-    >
-      
-      {/* AREA LOGO */}
-      <div className="p-8 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden border border-gray-100 shadow-sm p-1">
-            <img src={LappoLogo} alt="Lappo Coffee Logo" className="w-full h-full object-contain" />
+    <>
+      <div 
+        className={`w-64 bg-white border-r border-gray-100 flex flex-col h-screen sticky top-0 shadow-sm font-sans z-40 transform transition-transform duration-700 ease-out ${
+          isMounted ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        
+        {/* AREA LOGO */}
+        <div className="p-8 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden border border-gray-100 shadow-sm p-1">
+              <img src={LappoLogo} alt="Lappo Coffee Logo" className="w-full h-full object-contain" />
+          </div>
+          <div className="flex items-center gap-1">
+              <span className="text-2xl font-bold text-[#005432] tracking-tight">Lappo</span>
+              <span className="text-2xl font-normal text-[#005432] tracking-tight">Coffee</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-            <span className="text-2xl font-bold text-[#005432] tracking-tight">Lappo</span>
-            <span className="text-2xl font-normal text-[#005432] tracking-tight">Coffee</span>
+
+        {/* NAVIGATION MENU */}
+        <nav className="flex-1 px-4 space-y-3 pt-6">
+          {activeMenus.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 group ${
+                  isActive 
+                    ? 'bg-green-50 text-[#005432] font-semibold shadow-sm' 
+                    : 'text-gray-400 hover:bg-green-50/50 hover:text-[#005432]'
+                }`}
+              >
+                <span className={`transition-colors duration-300 ${isActive ? 'text-[#005432]' : 'text-gray-400 group-hover:text-[#005432]'}`}>
+                  {item.icon}
+                </span>
+                <span className="text-base tracking-wide">{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* LOGOUT AREA */}
+        <div className="p-6">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-4 px-6 py-4 w-full bg-red-50 text-red-700 font-bold rounded-2xl hover:bg-red-100 transition-all duration-200 shadow-sm border border-red-100"
+          >
+            <LogOut size={20} className="rotate-180" />
+            <span className="text-sm tracking-tight">
+              Log Out {isOwner ? 'Owner' : 'Kasir'}
+            </span>
+          </button>
         </div>
       </div>
 
-      {/* NAVIGATION MENU */}
-      <nav className="flex-1 px-4 space-y-3 pt-6">
-        {activeMenus.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.name}
-              to={item.path}
-              className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 group ${
-                isActive 
-                  ? 'bg-green-50 text-[#005432] font-semibold shadow-sm' 
-                  : 'text-gray-400 hover:bg-green-50/50 hover:text-[#005432]'
-              }`}
+      {/* POP-UP MODAL WARNING SHIFT (Akan muncul di tengah layar) */}
+      {showShiftWarning && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          {/* Latar belakang blur */}
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setShowShiftWarning(false)}></div>
+          
+          {/* Kotak Pop-up */}
+          <div className="relative w-full max-w-xs bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100 p-6 text-center">
+            
+            <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-100">
+              <AlertCircle size={28} strokeWidth={2.5} />
+            </div>
+            
+            <h2 className="text-xl font-black text-gray-900 mb-2">Shift Masih Aktif!</h2>
+            
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              Anda harus mengakhiri shift di halaman <span className="font-bold text-gray-700">Dashboard Kasir</span> terlebih dahulu sebelum keluar.
+            </p>
+            
+            <button 
+              onClick={() => setShowShiftWarning(false)} 
+              className="w-full bg-gray-800 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-gray-900 transition-colors shadow-sm"
             >
-              <span className={`transition-colors duration-300 ${isActive ? 'text-[#005432]' : 'text-gray-400 group-hover:text-[#005432]'}`}>
-                {item.icon}
-              </span>
-              <span className="text-base tracking-wide">{item.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* LOGOUT AREA */}
-      <div className="p-6">
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-4 px-6 py-4 w-full bg-red-50 text-red-700 font-bold rounded-2xl hover:bg-red-100 transition-all duration-200 shadow-sm border border-red-100"
-        >
-          <LogOut size={20} className="rotate-180" />
-          <span className="text-sm tracking-tight">
-            Log Out {isOwner ? 'Owner' : 'Kasir'}
-          </span>
-        </button>
-      </div>
-    </div>
+              Mengerti
+            </button>
+            
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

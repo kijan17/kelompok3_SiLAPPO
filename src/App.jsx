@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Layout
 import MainLayout from './layouts/MainLayout'; 
-import RiwayatKasir from './pages/kasir/RiwayatKasir'; // Tetap menggunakan import biasa sesuai kodemu
+import RiwayatKasir from './pages/kasir/RiwayatKasir'; 
 
 // === LAZY IMPORT HALAMAN OWNER ===
 const DashboardOwner = lazy(() => import('./pages/owner/DashboardOwner'));
@@ -20,6 +20,41 @@ const DashboardKasir = lazy(() => import('./pages/kasir/DashboardKasir').catch((
   default: () => <div className="p-8"><h1 className="text-2xl font-bold text-gray-800">Dashboard Kasir</h1><p className="text-gray-500 mt-2">Halaman utama operasional shift kasir.</p></div>
 })));
 
+// =====================================================================
+// SISTEM PENJAGA PINTU (PROTECTED ROUTE)
+// =====================================================================
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const role = localStorage.getItem('role');
+  
+  // 1. Jika belum login, tendang paksa ke halaman Login
+  if (!role) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // 2. Jika perannya tidak sesuai (misal Kasir nyasar ke URL Owner)
+  // Tendang kembali ke dashboard masing-masing
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return <Navigate to={role === 'owner' ? '/dashboardOwner' : '/dashboardKasir'} replace />;
+  }
+  
+  // 3. Jika aman, persilakan masuk ke halaman yang dituju
+  return children;
+};
+
+// =====================================================================
+// PENGARAH HALAMAN AWAL (ROOT REDIRECT)
+// =====================================================================
+const RootRedirect = () => {
+  const role = localStorage.getItem('role');
+  
+  if (role === 'owner') return <Navigate to="/dashboardOwner" replace />;
+  if (role === 'kasir') return <Navigate to="/dashboardKasir" replace />;
+  
+  // Jika tidak ada data role, arahkan ke login
+  return <Navigate to="/login" replace />;
+};
+
+
 const App = () => {
   return (
     <Suspense fallback={
@@ -29,24 +64,51 @@ const App = () => {
     }>
       <Routes>
         
-        {/* Default Route */}
-        <Route path="/" element={<Navigate to="/dashboardOwner" replace />} />
+        {/* Default Route: Akan otomatis mengecek status login */}
+        <Route path="/" element={<RootRedirect />} />
 
-        {/* === RUTE AUTH (Tanpa Sidebar) === */}
+        {/* === RUTE AUTH (Tanpa Sidebar & Penjaga) === */}
         <Route path="/login" element={<Login />} />
 
-        {/* === RUTE YANG MENGGUNAKAN SIDEBAR (MainLayout) === */}
-        <Route path="/dashboardOwner" element={<MainLayout><DashboardOwner /></MainLayout>} />
-        <Route path="/kelola-produk" element={<MainLayout><KelolaProduk /></MainLayout>} />
-        <Route path="/stok-bahan" element={<MainLayout><StokBahan /></MainLayout>} /> 
-        <Route path="/kelola-kasir" element={<MainLayout><KelolaKasir /></MainLayout>} />
-        <Route path="/laporan" element={<MainLayout><Laporan /></MainLayout>} />
+
+        {/* ========================================== */}
+        {/* === RUTE KHUSUS OWNER (Wajib Login) ==== */}
+        {/* ========================================== */}
+        <Route path="/dashboardOwner" element={
+          <ProtectedRoute allowedRoles={['owner']}><MainLayout><DashboardOwner /></MainLayout></ProtectedRoute>
+        } />
+        <Route path="/kelola-produk" element={
+          <ProtectedRoute allowedRoles={['owner']}><MainLayout><KelolaProduk /></MainLayout></ProtectedRoute>
+        } />
+        <Route path="/stok-bahan" element={
+          <ProtectedRoute allowedRoles={['owner']}><MainLayout><StokBahan /></MainLayout></ProtectedRoute>
+        } /> 
+        <Route path="/kelola-kasir" element={
+          <ProtectedRoute allowedRoles={['owner']}><MainLayout><KelolaKasir /></MainLayout></ProtectedRoute>
+        } />
+        <Route path="/laporan" element={
+          <ProtectedRoute allowedRoles={['owner']}><MainLayout><Laporan /></MainLayout></ProtectedRoute>
+        } />
         
-        <Route path="/dashboardKasir" element={<MainLayout><DashboardKasir /></MainLayout>} /> 
-        <Route path="/pos" element={<MainLayout><TransaksiBaru /></MainLayout>} />
-        
-        {/* 👇 INI YANG KITA PERBAIKI: Membungkus RiwayatKasir dengan MainLayout 👇 */}
-        <Route path="/riwayat-transaksi" element={<MainLayout><RiwayatKasir /></MainLayout>} />
+
+        {/* ========================================== */}
+        {/* === RUTE KHUSUS KASIR (Wajib Login) ==== */}
+        {/* ========================================== */}
+        <Route path="/dashboardKasir" element={
+          <ProtectedRoute allowedRoles={['kasir']}><MainLayout><DashboardKasir /></MainLayout></ProtectedRoute>
+        } /> 
+        <Route path="/pos" element={
+          <ProtectedRoute allowedRoles={['kasir']}><MainLayout><TransaksiBaru /></MainLayout></ProtectedRoute>
+        } />
+        <Route path="/riwayat-transaksi" element={
+          <ProtectedRoute allowedRoles={['kasir']}><MainLayout><RiwayatKasir /></MainLayout></ProtectedRoute>
+        } />
+
+        {/* 
+            RUTE NYASAR (404 NOT FOUND) 
+            Jika ada yang iseng ngetik URL asal-asalan, balikan ke jalur yang benar 
+        */}
+        <Route path="*" element={<RootRedirect />} />
 
       </Routes>
     </Suspense>

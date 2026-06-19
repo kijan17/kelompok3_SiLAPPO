@@ -48,13 +48,47 @@ const LaporanKeuangan = () => {
     return 'Rp ' + angka.toLocaleString('id-ID');
   };
 
-  // 3. LOGIKA MATEMATIKA DINAMIS UNTUK PIE CHART (Distribusi Produk)
+// 3. LOGIKA EKSPOR KE CSV (EXCEL) YANG SUDAH DIRAPIKAN
+  const handleExportCSV = () => {
+    if (filteredTransactions.length === 0) {
+      alert("Tidak ada data transaksi untuk diekspor pada tanggal ini.");
+      return;
+    }
+
+    // Menggunakan TITIK KOMA (;) agar rapi di Excel versi Indonesia
+    let csvContent = "ID Nota;Petugas Kasir;Menu Pesanan;Waktu Transaksi;Total Pembayaran;Status\n";
+
+    filteredTransactions.forEach(row => {
+      const menuPesanan = row.items ? row.items.map(item => `${item.qty}x ${item.name}`).join(" + ") : "-";
+      
+      const rowData = [
+        row.id,
+        row.name || 'Kasir',
+        `"${menuPesanan}"`, 
+        row.open,
+        `"${row.total}"`,
+        "Berhasil"
+      ];
+      // Gabungkan dengan titik koma (;)
+      csvContent += rowData.join(";") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Laporan_Keuangan_Lappo_${filterDate || 'Semua'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 4. LOGIKA MATEMATIKA DINAMIS UNTUK PIE CHART (Distribusi Produk)
   const getDynamicPieData = () => {
     if (filteredTransactions.length === 0) {
       return [{ name: 'Belum ada penjualan', value: 1, color: '#d1d5db' }];
     }
 
-    // Hitung kemunculan item dari transaksi yang terfilter
     const productCounts = {};
     filteredTransactions.forEach(trx => {
       if (trx.items) {
@@ -68,7 +102,6 @@ const LaporanKeuangan = () => {
       }
     });
 
-    // Ubah jadi array, urutkan dari yang terbanyak, ambil top 4
     const sortedProducts = Object.keys(productCounts)
       .map(key => ({
         name: key,
@@ -77,7 +110,6 @@ const LaporanKeuangan = () => {
       .sort((a, b) => b.value - a.value)
       .slice(0, 4);
 
-    // Beri warna
     const colors = ['#005432', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6'];
     return sortedProducts.map((prod, index) => ({
       ...prod,
@@ -105,7 +137,7 @@ const LaporanKeuangan = () => {
               className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors shadow-sm text-sm outline-none focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] cursor-pointer"
             />
           </div>
-          <button className="flex items-center gap-2 bg-[#005432] text-white px-4 py-2 rounded-xl font-semibold hover:bg-green-900 transition-colors shadow-sm shadow-green-900/20 text-sm">
+          <button onClick={handleExportCSV} className="flex items-center gap-2 bg-[#005432] text-white px-4 py-2 rounded-xl font-semibold hover:bg-green-900 transition-colors shadow-sm shadow-green-900/20 text-sm">
             <Download size={16} /> Ekspor
           </button>
         </div>
@@ -149,8 +181,8 @@ const LaporanKeuangan = () => {
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h3 className="font-bold text-gray-900 text-lg">Tren Pendapatan Harian</h3>
-              <p className="text-sm text-gray-500 mt-1">Grafik pergerakan omzet minggu ini</p>
+              <h3 className="font-bold text-gray-900 text-lg">Tren Pendapatan Mingguan</h3>
+              <p className="text-sm text-gray-500 mt-1">Grafik overview pergerakan omzet minggu ini</p>
             </div>
             <div className="p-2 bg-gray-50 text-gray-400 rounded-lg border border-gray-100"><TrendingUp size={18}/></div>
           </div>
@@ -184,7 +216,6 @@ const LaporanKeuangan = () => {
           <div className="flex-1 flex flex-col justify-center relative min-h-[250px]">
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                {/* MENGGUNAKAN DYNAMIC PIE DATA */}
                 <PieChart>
                   <Pie data={dynamicPieData} dataKey="value" innerRadius={55} outerRadius={80} paddingAngle={2} stroke="none">
                     {dynamicPieData.map((e, i) => <Cell key={i} fill={e.color} />)}

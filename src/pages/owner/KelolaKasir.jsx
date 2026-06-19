@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, BarChart2, Users, Clock, Activity, CheckCircle2, X, Save, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, BarChart2, Users, Clock, Activity, CheckCircle2, X, Save, AlertCircle } from 'lucide-react';
 
 const KelolaKasir = () => {
   const [kasirs, setKasirs] = useState([]);
@@ -18,6 +18,21 @@ const KelolaKasir = () => {
     password: ''
   });
 
+  // STATE UNTUK POP-UP NOTIFIKASI (TOAST)
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
+  
+  // STATE UNTUK MODAL KONFIRMASI HAPUS
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [kasirToDelete, setKasirToDelete] = useState(null);
+
+  // FUNGSI PEMANGGIL NOTIFIKASI
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   useEffect(() => {
     fetchKasirs();
   }, []);
@@ -28,7 +43,10 @@ const KelolaKasir = () => {
       .then(data => { 
         if (data.success) setKasirs(data.data); 
       })
-      .catch(err => console.error("Error fetching kasir:", err));
+      .catch(err => {
+        console.error("Error fetching kasir:", err);
+        showToast("Gagal mengambil data staf dari server.", "error");
+      });
   };
 
   const openModal = (kasir = null) => {
@@ -75,7 +93,7 @@ const KelolaKasir = () => {
       });
     } catch (error) {
       console.error("Gagal mengambil statistik", error);
-      alert("Gagal mengambil data statistik kasir.");
+      showToast("Gagal mengambil data statistik kasir.", "error");
     }
   };
 
@@ -96,22 +114,39 @@ const KelolaKasir = () => {
       if (data.success) { 
         setIsModalOpen(false); 
         fetchKasirs(); 
+        showToast(editingKasir ? "Data staf berhasil diperbarui!" : "Staf kasir baru berhasil didaftarkan!", "success");
       } else {
-        alert("Gagal menyimpan: Cek apakah ID Staf/Username sudah digunakan.");
+        showToast("Gagal menyimpan: Cek apakah ID Staf/Username sudah digunakan.", "error");
       }
     })
     .catch(err => {
       console.error("Error:", err);
-      alert("Terjadi kesalahan koneksi ke server.");
+      showToast("Terjadi kesalahan koneksi ke server.", "error");
     });
   };
 
-  const handleDelete = (id, nama) => {
-    if(window.confirm(`Yakin ingin menghapus staf kasir: ${nama}?`)) {
-      fetch(`http://127.0.0.1:8000/api/kasirs/${id}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => { if(data.success) fetchKasirs(); });
-    }
+  const handleDeleteClick = (id, nama) => {
+    setKasirToDelete({ id, nama });
+    setIsConfirmDeleteOpen(true);
+  };
+
+  const executeDelete = () => {
+    if (!kasirToDelete) return;
+
+    fetch(`http://127.0.0.1:8000/api/kasirs/${kasirToDelete.id}`, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(data => { 
+        if(data.success) {
+          fetchKasirs(); 
+          showToast(`Staf ${kasirToDelete.nama} berhasil dihapus dari sistem.`, "success");
+        } else {
+          showToast("Gagal menghapus data staf.", "error");
+        }
+      })
+      .catch(() => showToast("Terjadi kesalahan koneksi ke server.", "error"));
+
+    setIsConfirmDeleteOpen(false);
+    setKasirToDelete(null);
   };
 
   const getInitials = (name) => {
@@ -146,8 +181,23 @@ const KelolaKasir = () => {
   const kasirSedangJaga = kasirs.filter(k => k.status === 'Sedang Jaga').length;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 font-sans relative min-h-screen pb-10">
+    <div className="space-y-8 animate-in fade-in duration-500 font-sans relative min-h-screen pb-10 overflow-hidden">
       
+      {/* TOAST NOTIFICATION POP-UP */}
+      <div className={`fixed top-6 right-6 z-[9999] transition-all duration-500 transform ${toast.visible ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-20 opacity-0 scale-95 pointer-events-none'}`}>
+        <div className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border ${toast.type === 'success' ? 'bg-white border-green-100' : 'bg-white border-red-100'}`}>
+          <div className={`p-2 rounded-full shrink-0 ${toast.type === 'success' ? 'bg-green-50 text-[#005432]' : 'bg-red-50 text-red-600'}`}>
+            {toast.type === 'success' ? <CheckCircle2 size={20} strokeWidth={2.5} /> : <AlertCircle size={20} strokeWidth={2.5} />}
+          </div>
+          <div className="pr-2">
+            <p className={`text-sm font-bold ${toast.type === 'success' ? 'text-gray-900' : 'text-red-700'}`}>
+              {toast.type === 'success' ? 'Berhasil!' : 'Peringatan Sistem'}
+            </p>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">{toast.message}</p>
+          </div>
+        </div>
+      </div>
+
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
@@ -159,7 +209,7 @@ const KelolaKasir = () => {
         </button>
       </div>
 
-      {/* KPI METRICS (Dinaikkan ke atas agar profesional) */}
+      {/* KPI METRICS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-100 transition-colors">
           <div>
@@ -270,7 +320,7 @@ const KelolaKasir = () => {
                         <button onClick={() => openModal(item)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" title="Edit Staf">
                           <Edit size={16}/>
                         </button>
-                        <button onClick={() => handleDelete(item.id, item.nama_lengkap)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus Staf">
+                        <button onClick={() => handleDeleteClick(item.id, item.nama_lengkap)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus Staf">
                           <Trash2 size={16}/>
                         </button>
                       </div>
@@ -352,8 +402,9 @@ const KelolaKasir = () => {
 
               <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">ID Staf (Otomatis)</label>
-                    <input required readOnly value={formData.id_staf} onChange={(e) => setFormData({...formData, id_staf: e.target.value})} type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-500 outline-none font-mono cursor-not-allowed" />
+                    {/* LABEL DIPERBARUI & READONLY DIHAPUS */}
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">ID Staf</label>
+                    <input required value={formData.id_staf} onChange={(e) => setFormData({...formData, id_staf: e.target.value})} type="text" className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] outline-none transition-all font-mono" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Status Akses</label>
@@ -374,8 +425,32 @@ const KelolaKasir = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL KONFIRMASI HAPUS STAF */}
+      {isConfirmDeleteOpen && kasirToDelete && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setIsConfirmDeleteOpen(false)}></div>
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100 p-6 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+              <Trash2 size={28} strokeWidth={2.5} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900 mb-2">Hapus Akun Staf?</h2>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              Anda yakin ingin menghapus akses <span className="font-bold text-gray-800">{kasirToDelete.nama}</span> dari sistem POS? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setIsConfirmDeleteOpen(false)} className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors">
+                Batal
+              </button>
+              <button onClick={executeDelete} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-red-600 transition-colors shadow-sm">
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default KelolaKasir;
+export default KelolaKasir; 
