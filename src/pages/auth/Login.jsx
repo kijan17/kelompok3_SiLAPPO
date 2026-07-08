@@ -110,14 +110,14 @@ const Login = () => {
 
       {/* BAGIAN KIRI: Background Hijau & Logo */}
       <div 
-        className={`hidden lg:flex flex-col justify-center items-center w-1/2 bg-[#005432] z-10 transition-transform duration-700 ease-in-out ${
+        className={`hidden lg:flex flex-col justify-center items-center w-1/2 bg-[#005E39] z-10 transition-transform duration-700 ease-in-out ${
           isAnimating ? '-translate-x-full' : 'translate-x-0'
         }`}
       >
         <img 
           src={LappoLogo} 
           alt="Lappo Coffee" 
-          className="w-64 object-contain drop-shadow-xl" 
+          className="w-64 object-contain" 
         />
       </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Receipt, Eye, Printer, ShoppingBag, X, CheckCircle2 } from 'lucide-react';
+import { Search, Receipt, Eye, Printer, ShoppingBag, X, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const RiwayatKasir = () => {
   const [transactions, setTransactions] = useState([]);
@@ -11,6 +11,10 @@ const RiwayatKasir = () => {
   const [namaKasir, setNamaKasir] = useState('Kasir');
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTrx, setSelectedTrx] = useState(null);
+
+  // STATE PAGINATION
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const storedName = localStorage.getItem('kasir_name');
@@ -35,11 +39,22 @@ const RiwayatKasir = () => {
       });
   }, []);
 
+  // KEMBALI KE HALAMAN 1 JIKA FILTER/PENCARIAN BERUBAH
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterDate]);
+
   const filteredTrx = transactions.filter(trx => {
     const matchSearch = trx.id.toLowerCase().includes(searchQuery.toLowerCase());
     const matchDate = filterDate === '' || trx.tanggal === filterDate;
     return matchSearch && matchDate;
   });
+
+  // LOGIKA PAGINATION
+  const totalPages = Math.ceil(filteredTrx.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredTrx.slice(indexOfFirstItem, indexOfLastItem);
 
   const openDetail = (trx) => {
     setSelectedTrx(trx);
@@ -61,7 +76,6 @@ const RiwayatKasir = () => {
 
   return (
     <div className="relative font-sans pb-10">
-      {/* Container bersih tanpa animasi transisi GPU */}
       <div className="flex flex-col gap-6">
         
         {/* HEADER SECTION */}
@@ -133,7 +147,7 @@ const RiwayatKasir = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredTrx.map((row, i) => (
+                  currentItems.map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50/50 transition-colors group border-b border-gray-100 last:border-0">
                       <td className="px-6 py-4 align-top">
                         <span className="font-mono font-bold text-[11px] text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
@@ -179,6 +193,19 @@ const RiwayatKasir = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* AREA PAGINATION */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 p-5 border-t border-gray-100 bg-white">
+              <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                <ChevronLeft size={18}/>
+              </button>
+              <span className="text-sm font-semibold text-gray-600">Halaman {currentPage} dari {totalPages}</span>
+              <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                <ChevronRight size={18}/>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

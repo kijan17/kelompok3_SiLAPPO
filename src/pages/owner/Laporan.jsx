@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, DollarSign, Receipt, Coffee, Download, TrendingUp } from 'lucide-react';
+import { Printer, DollarSign, Receipt, Coffee, Download, TrendingUp, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell } from 'recharts';
 
 const LaporanKeuangan = () => {
   const [data, setData] = useState(null);
   const [namaPengguna, setNamaPengguna] = useState('Owner');
   const [isMounted, setIsMounted] = useState(false);
-  const [filterDate, setFilterDate] = useState(''); 
+  
+  // STATE RENTANG TANGGAL (DATE RANGE)
+  const [startDate, setStartDate] = useState(''); 
+  const [endDate, setEndDate] = useState(''); 
+
+  // STATE PAGINATION
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const storedName = localStorage.getItem('kasir_name');
@@ -21,6 +28,11 @@ const LaporanKeuangan = () => {
       .catch(err => console.error("Error fetching data:", err));
   }, []);
 
+  // KEMBALI KE HALAMAN 1 JIKA FILTER TANGGAL BERUBAH
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [startDate, endDate]);
+
   if (!data) return (
     <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
       <div className="w-10 h-10 border-4 border-gray-200 border-t-[#005432] rounded-full animate-spin"></div>
@@ -28,11 +40,25 @@ const LaporanKeuangan = () => {
     </div>
   );
 
-  // 1. LOGIKA FILTER TANGGAL
+  // 1. LOGIKA FILTER RENTANG TANGGAL (DATE RANGE)
   const filteredTransactions = data.recent_transactions.filter(row => {
-    if (!filterDate) return true; 
-    return row.tanggal === filterDate;
+    if (!startDate && !endDate) return true;
+    
+    const trxDate = new Date(row.tanggal);
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+
+    if (start && end) return trxDate >= start && trxDate <= end;
+    if (start) return trxDate >= start;
+    if (end) return trxDate <= end;
+    return true;
   });
+
+  // LOGIKA PAGINATION
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
 
   // 2. LOGIKA MATEMATIKA DINAMIS UNTUK KPI CARDS
   const dynamicTotalTransaksi = filteredTransactions.length;
@@ -48,19 +74,17 @@ const LaporanKeuangan = () => {
     return 'Rp ' + angka.toLocaleString('id-ID');
   };
 
-// 3. LOGIKA EKSPOR KE CSV (EXCEL) YANG SUDAH DIRAPIKAN
+  // 3. LOGIKA EKSPOR KE CSV (EXCEL)
   const handleExportCSV = () => {
     if (filteredTransactions.length === 0) {
-      alert("Tidak ada data transaksi untuk diekspor pada tanggal ini.");
+      alert("Tidak ada data transaksi untuk diekspor pada rentang tanggal ini.");
       return;
     }
 
-    // Menggunakan TITIK KOMA (;) agar rapi di Excel versi Indonesia
     let csvContent = "ID Nota;Petugas Kasir;Menu Pesanan;Waktu Transaksi;Total Pembayaran;Status\n";
 
     filteredTransactions.forEach(row => {
       const menuPesanan = row.items ? row.items.map(item => `${item.qty}x ${item.name}`).join(" + ") : "-";
-      
       const rowData = [
         row.id,
         row.name || 'Kasir',
@@ -69,7 +93,6 @@ const LaporanKeuangan = () => {
         `"${row.total}"`,
         "Berhasil"
       ];
-      // Gabungkan dengan titik koma (;)
       csvContent += rowData.join(";") + "\n";
     });
 
@@ -77,13 +100,44 @@ const LaporanKeuangan = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Laporan_Keuangan_Lappo_${filterDate || 'Semua'}.csv`);
+    link.setAttribute("download", `Laporan_Keuangan_Lappo_${startDate || 'Awal'}_SD_${endDate || 'Akhir'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // 4. LOGIKA MATEMATIKA DINAMIS UNTUK PIE CHART (Distribusi Produk)
+  // 4. LOGIKA GRAFIK AREA DINAMIS (TREN PENDAPATAN)
+  const getDynamicAreaChartData = () => {
+    if (filteredTransactions.length === 0) return [];
+
+    const groupedData = {};
+    filteredTransactions.forEach(trx => {
+      const date = trx.tanggal;
+      const amount = parseInt(trx.total.replace(/[^0-9]/g, ''), 10) || 0;
+      if (groupedData[date]) {
+        groupedData[date] += amount;
+      } else {
+        groupedData[date] = amount;
+      }
+    });
+
+    // Urutkan tanggal dari terlama ke terbaru
+    const sortedDates = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
+
+    return sortedDates.map(dateStr => {
+      const d = new Date(dateStr);
+      const dayName = d.toLocaleDateString('id-ID', { weekday: 'short' });
+      return {
+        name: `${dayName}, ${d.getDate()}`,
+        current: groupedData[dateStr] / 1000 // Dibagi 1000 untuk format Ribuan (Rb) di YAxis
+      };
+    });
+  };
+
+  const dynamicChartData = getDynamicAreaChartData();
+  const finalChartData = dynamicChartData.length > 0 ? dynamicChartData : data.chart_data;
+
+  // 5. LOGIKA MATEMATIKA DINAMIS UNTUK PIE CHART (Distribusi Produk)
   const getDynamicPieData = () => {
     if (filteredTransactions.length === 0) {
       return [{ name: 'Belum ada penjualan', value: 1, color: '#d1d5db' }];
@@ -123,22 +177,42 @@ const LaporanKeuangan = () => {
     <div className={`space-y-6 font-sans min-h-screen pb-10 transition-all duration-700 ease-out transform ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
       
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200 pb-5">
+      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-end gap-4 border-b border-gray-200 pb-5">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Laporan <span className="text-[#005432]">Keuangan</span></h1>
           <p className="text-gray-500 mt-1 text-sm">Ringkasan performa penjualan dan analisis transaksi real-time.</p>
         </div>
-        <div className="flex gap-3 items-center">
-          <div className="relative">
-            <input 
-              type="date" 
-              value={filterDate} 
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors shadow-sm text-sm outline-none focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] cursor-pointer"
-            />
+        
+        {/* RENTANG TANGGAL (DATE RANGE FILTER) */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm">
+            <Calendar size={16} className="text-gray-400" />
+            <div className="flex items-center gap-2">
+              <input 
+                type="date" 
+                value={startDate} 
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-32 bg-transparent text-gray-600 font-semibold text-sm outline-none cursor-pointer"
+                title="Dari Tanggal"
+              />
+              <span className="text-gray-300 font-bold">-</span>
+              <input 
+                type="date" 
+                value={endDate} 
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-32 bg-transparent text-gray-600 font-semibold text-sm outline-none cursor-pointer"
+                title="Sampai Tanggal"
+              />
+            </div>
+            {(startDate || endDate) && (
+              <button onClick={() => { setStartDate(''); setEndDate(''); }} className="ml-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-md px-2 py-1 font-bold transition-colors">
+                Reset
+              </button>
+            )}
           </div>
-          <button onClick={handleExportCSV} className="flex items-center gap-2 bg-[#005432] text-white px-4 py-2 rounded-xl font-semibold hover:bg-green-900 transition-colors shadow-sm shadow-green-900/20 text-sm">
-            <Download size={16} /> Ekspor
+
+          <button onClick={handleExportCSV} className="flex items-center gap-2 bg-[#005432] text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-green-900 transition-colors shadow-sm shadow-green-900/20 text-sm">
+            <Download size={16} /> Ekspor CSV
           </button>
         </div>
       </div>
@@ -149,7 +223,7 @@ const LaporanKeuangan = () => {
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-yellow-50 text-yellow-600 rounded-lg"><DollarSign size={20} /></div>
-              <p className="text-sm font-semibold text-gray-600">Total Pendapatan {filterDate ? 'Harian' : 'Keseluruhan'}</p>
+              <p className="text-sm font-semibold text-gray-600">Total Pendapatan {(startDate || endDate) ? 'Periode Terpilih' : 'Keseluruhan'}</p>
             </div>
           </div>
           <h3 className="text-3xl font-bold text-gray-900">{formatRupiah(dynamicTotalPendapatan)}</h3>
@@ -159,7 +233,7 @@ const LaporanKeuangan = () => {
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Receipt size={20} /></div>
-              <p className="text-sm font-semibold text-gray-600">Total Transaksi {filterDate ? 'Harian' : 'Selesai'}</p>
+              <p className="text-sm font-semibold text-gray-600">Total Transaksi {(startDate || endDate) ? 'Periode Terpilih' : 'Selesai'}</p>
             </div>
           </div>
           <h3 className="text-3xl font-bold text-gray-900">{dynamicTotalTransaksi} <span className="text-lg text-gray-400 font-medium">Nota</span></h3>
@@ -181,14 +255,14 @@ const LaporanKeuangan = () => {
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h3 className="font-bold text-gray-900 text-lg">Tren Pendapatan Mingguan</h3>
-              <p className="text-sm text-gray-500 mt-1">Grafik overview pergerakan omzet minggu ini</p>
+              <h3 className="font-bold text-gray-900 text-lg">Tren Pendapatan</h3>
+              <p className="text-sm text-gray-500 mt-1">Pergerakan omzet {(startDate || endDate) ? 'pada rentang tanggal terpilih' : 'keseluruhan'}</p>
             </div>
             <div className="p-2 bg-gray-50 text-gray-400 rounded-lg border border-gray-100"><TrendingUp size={18}/></div>
           </div>
           <div className="w-full flex-1 min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.chart_data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={finalChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#005432" stopOpacity={0.2}/>
@@ -211,7 +285,7 @@ const LaporanKeuangan = () => {
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col">
           <div className="mb-4 border-b border-gray-100 pb-4">
             <h3 className="font-bold text-gray-900 text-lg">Distribusi Produk</h3>
-            <p className="text-sm text-gray-500 mt-1">Kategori menu terlaris {filterDate && "di tanggal ini"}</p>
+            <p className="text-sm text-gray-500 mt-1">Kategori menu terlaris {(startDate || endDate) ? "di periode ini" : "keseluruhan"}</p>
           </div>
           <div className="flex-1 flex flex-col justify-center relative min-h-[250px]">
             <div className="h-[180px] w-full">
@@ -242,15 +316,10 @@ const LaporanKeuangan = () => {
         </div>
       </div>
 
-      {/* TABLE SECTION */}
+      {/* TABLE SECTION DENGAN PAGINATION */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50/30">
-          <h2 className="text-lg font-bold text-gray-900">Histori Transaksi Keseluruhan</h2>
-          {filterDate && (
-             <button onClick={() => setFilterDate('')} className="text-xs text-red-500 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 font-bold transition-colors">
-               Hapus Filter ✖
-             </button>
-          )}
+          <h2 className="text-lg font-bold text-gray-900">Histori Transaksi Terkait</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -268,11 +337,11 @@ const LaporanKeuangan = () => {
               {filteredTransactions.length === 0 ? (
                  <tr>
                    <td colSpan="6" className="p-12 text-center text-gray-400 font-medium">
-                     Tidak ada transaksi pada tanggal tersebut.
+                     Tidak ada transaksi pada rentang tanggal tersebut.
                    </td>
                  </tr>
               ) : (
-                filteredTransactions.map((row, i) => (
+                currentItems.map((row, i) => (
                   <tr key={i} className="hover:bg-gray-50/80 transition-colors group">
                     <td className="px-6 py-4 align-top">
                       <span className="font-mono font-medium text-gray-600 bg-white border border-gray-200 shadow-sm px-2.5 py-1.5 rounded-lg">{row.id}</span>
@@ -311,6 +380,19 @@ const LaporanKeuangan = () => {
             </tbody>
           </table>
         </div>
+        
+        {/* AREA PAGINATION */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 p-5 border-t border-gray-200 bg-white">
+            <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              <ChevronLeft size={18}/>
+            </button>
+            <span className="text-sm font-semibold text-gray-600">Halaman {currentPage} dari {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              <ChevronRight size={18}/>
+            </button>
+          </div>
+        )}
       </div>
       
     </div>

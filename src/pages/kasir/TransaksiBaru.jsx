@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Coffee, FileText, ShoppingBag, Plus, Minus, Trash2, X, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Search, Coffee, FileText, ShoppingBag, Plus, Minus, Trash2, X, Lock, CheckCircle2, AlertCircle, Droplet, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const TransaksiKasir = () => {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Semua');
+  
+  // STATE PAGINATION
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
   
   const [namaKasir, setNamaKasir] = useState('Kasir');
   const [isShiftActive, setIsShiftActive] = useState(false);
@@ -12,15 +17,14 @@ const TransaksiKasir = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   
-  const [isContentMounted, setIsContentMounted] = useState(false);
+  // STATE UNTUK POP-UP KONFIRMASI TAMBAH KE KERANJANG
+  const [isConfirmAddOpen, setIsConfirmAddOpen] = useState(false);
+  const [productToAdd, setProductToAdd] = useState(null);
 
-  // STATE UNTUK POP-UP NOTIFIKASI (TOAST)
+  const [isContentMounted, setIsContentMounted] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
-  
-  // STATE UNTUK MODAL KONFIRMASI KOSONGKAN KERANJANG
   const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
 
-  // FUNGSI PEMANGGIL NOTIFIKASI
   const showToast = (message, type = 'success') => {
     setToast({ visible: true, message, type });
     setTimeout(() => {
@@ -37,38 +41,80 @@ const TransaksiKasir = () => {
     const kasirId = localStorage.getItem('kasir_id');
     const shiftStatus = localStorage.getItem(`is_shift_active_${kasirId}`);
     setIsShiftActive(shiftStatus === 'true');
+  }, []);
 
-    fetch('http://127.0.0.1:8000/api/products')
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchProducts(currentPage, searchQuery, activeCategory);
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [currentPage, searchQuery, activeCategory]);
+
+  const fetchProducts = (page, search, category) => {
+    let url = `http://127.0.0.1:8000/api/products?page=${page}&search=${search}`;
+    if (category !== 'Semua') {
+        url += `&kategori=${category}`;
+    }
+
+    fetch(url)
       .then(res => res.json())
       .then(data => {
-        const productsFromDB = data.data || data; 
-        const formattedProducts = productsFromDB.map(p => ({
-          id: p.id,
-          name: p.nama_produk,
-          price: Number(p.harga),
-          desc: 'Menu spesial dari Lappo Coffee. Diramu dengan bahan berkualitas tinggi.',
-          tags: ['Tersedia']
-        }));
-        setProducts(formattedProducts);
+        if (data.success) {
+            const productsFromDB = data.data.data; 
+            const formattedProducts = productsFromDB.map(p => ({
+              id: p.id,
+              name: p.nama_produk,
+              price: Number(p.harga),
+              category: p.kategori || 'Coffee',
+              gambar: p.gambar,
+              desc: 'Menu spesial dari Lappo Coffee. Diramu dengan bahan berkualitas tinggi.',
+              tags: ['Tersedia']
+            }));
+            
+            setProducts(formattedProducts);
+            setCurrentPage(data.data.current_page);
+            setLastPage(data.data.last_page);
+        }
       })
       .catch(err => {
         console.error("Gagal menarik data menu:", err);
         showToast("Gagal terhubung ke server untuk mengambil menu.", "error");
       });
-  }, []);
+  };
 
-  const addToCart = (product) => {
+  const handleCategoryChange = (cat) => {
+      setActiveCategory(cat);
+      setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+      setSearchQuery(e.target.value);
+      setCurrentPage(1);
+  };
+
+  // FUNGSI MEMUNCULKAN POP-UP TAMBAH KERANJANG
+  const handleAddToCartClick = (product) => {
     if (!isShiftActive) {
       showToast("Shift belum dimulai! Tidak bisa menambah pesanan.", "error");
       return; 
     }
+    setProductToAdd(product);
+    setIsConfirmAddOpen(true);
+  };
+
+  // FUNGSI EKSEKUSI TAMBAH KE KERANJANG (SETELAH KLIK YA)
+  const executeAddToCart = () => {
+    if (!productToAdd) return;
     
-    const existing = cart.find(item => item.id === product.id);
+    const existing = cart.find(item => item.id === productToAdd.id);
     if (existing) {
-      setCart(cart.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item));
+      setCart(cart.map(item => item.id === productToAdd.id ? { ...item, qty: item.qty + 1 } : item));
     } else {
-      setCart([...cart, { ...product, qty: 1 }]);
+      setCart([...cart, { ...productToAdd, qty: 1 }]);
     }
+    
+    setIsConfirmAddOpen(false);
+    setProductToAdd(null);
   };
 
   const updateQty = (id, amount) => {
@@ -83,9 +129,7 @@ const TransaksiKasir = () => {
 
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
   
-  const handleClearCartClick = () => {
-    setIsConfirmClearOpen(true);
-  };
+  const handleClearCartClick = () => { setIsConfirmClearOpen(true); };
 
   const executeClearCart = () => {
     setCart([]);
@@ -98,22 +142,16 @@ const TransaksiKasir = () => {
     setIsDetailModalOpen(true);
   };
 
+  // MENGHAPUS LOGIKA PAJAK
   const totalPembayaran = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const totalPajak = totalPembayaran * 0.11; 
 
   const handleCheckout = () => {
     const kasirId = localStorage.getItem('kasir_id');
 
     const payload = {
       kasir_id: kasirId,
-      total_pajak: 0, 
       total_pembayaran: totalPembayaran,
-      items: cart.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        qty: item.qty 
-      }))
+      items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }))
     };
 
     fetch('http://127.0.0.1:8000/api/transactions', {
@@ -136,11 +174,6 @@ const TransaksiKasir = () => {
     });
   };
 
-  // PENCARIAN MENU (HANYA BERDASARKAN NAMA)
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
     <div className="relative min-h-screen font-sans overflow-hidden">
       
@@ -162,22 +195,32 @@ const TransaksiKasir = () => {
       <div className={`flex flex-col xl:flex-row gap-6 transition-all duration-700 ease-out transform ${isContentMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         
         {/* AREA KIRI: KATALOG PRODUK */}
-        <div className="w-full xl:w-[65%] flex flex-col gap-6 pb-10">
+        <div className="w-full xl:w-[65%] flex flex-col gap-6 pb-10 p-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-gray-200 pb-5">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Katalog <span className="text-[#005432]">Menu</span></h1>
               <p className="text-gray-500 mt-1 text-sm">Pilih menu dan kelola pesanan pelanggan.</p>
             </div>
+            {/* SEARCH BAR */}
             <div className="relative w-full md:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input 
                 type="text" 
                 placeholder="Cari nama menu..." 
                 value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
                 className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#005432]/20 focus:border-[#005432] outline-none transition-all shadow-sm" 
               />
             </div>
+          </div>
+
+          {/* TOMBOL FILTER KATEGORI */}
+          <div className="flex gap-3">
+              {['Semua', 'Coffee', 'Non-Coffee'].map((cat) => (
+                  <button key={cat} onClick={() => handleCategoryChange(cat)} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all shadow-sm ${activeCategory === cat ? 'bg-[#005432] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      {cat}
+                  </button>
+              ))}
           </div>
 
           {!isShiftActive && (
@@ -193,55 +236,66 @@ const TransaksiKasir = () => {
             </div>
           )}
 
-          {/* GRID PRODUK */}
+          {/* GRID PRODUK DENGAN GAMBAR */}
           {products.length === 0 ? (
-             <div className="bg-white p-12 rounded-2xl border border-gray-200 text-center flex flex-col items-center justify-center text-gray-400 shadow-sm">
-                <Coffee size={48} className="mb-4 opacity-50" />
-                <p className="font-bold text-gray-500">Memuat katalog menu...</p>
-             </div>
-          ) : filteredProducts.length === 0 ? (
              <div className="bg-white p-12 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-400">
                   <Search size={32} />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">Menu Tidak Ditemukan</h3>
-                <p className="text-gray-500 text-sm mt-1">Coba gunakan kata kunci lain untuk mencari menu.</p>
+                <p className="text-gray-500 text-sm mt-1">Belum ada menu di kategori ini atau pencarian tidak cocok.</p>
              </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredProducts.map((product) => (
-                <div key={product.id} className={`bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full transition-all duration-300 group ${!isShiftActive ? 'opacity-60 grayscale-[50%]' : 'hover:shadow-xl hover:-translate-y-1 hover:border-[#005432]/40'}`}>
-                  
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-3">
-                      <h4 className="font-bold text-gray-900 text-lg leading-snug pr-3 group-hover:text-[#005432] transition-colors">{product.name}</h4>
-                      <span className={`shrink-0 px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${!isShiftActive ? 'bg-gray-100 text-gray-500' : 'bg-green-50 text-[#005432] border border-green-100'}`}>
-                        {product.tags[0]}
-                      </span>
-                    </div>
+            <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {products.map((product) => (
+                  <div key={product.id} className={`bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full transition-all duration-300 group ${!isShiftActive ? 'opacity-60 grayscale-[50%]' : 'hover:shadow-xl hover:-translate-y-1 hover:border-[#005432]/40'}`}>
                     
-                    <div className="mt-auto pt-2">
-                      <div className="inline-block bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-lg">
-                        <p className="font-black text-[#005432] text-lg tracking-tight">Rp {product.price.toLocaleString('id-ID')}</p>
+                    {/* AREA GAMBAR MENU */}
+                    <div className="h-40 w-full bg-gray-50 relative overflow-hidden border-b border-gray-100 shrink-0">
+                        {product.gambar ? (
+                            <img src={`http://127.0.0.1:8000/storage/${product.gambar}`} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400">
+                                {product.category === 'Non-Coffee' ? <Droplet size={32} className="mb-2 opacity-40" /> : <Coffee size={32} className="mb-2 opacity-40" />}
+                                <span className="font-black text-xl opacity-30 uppercase tracking-widest">{product.name.substring(0, 2)}</span>
+                            </div>
+                        )}
+                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md border border-white/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                            <span className="text-[10px] font-bold text-gray-700 uppercase tracking-widest">{product.tags[0]}</span>
+                        </div>
+                    </div>
+
+                    <div className="p-5 flex-1 flex flex-col">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="font-bold text-gray-900 text-lg leading-snug pr-3 group-hover:text-[#005432] transition-colors">{product.name}</h4>
+                      </div>
+                      <div className="mt-auto pt-2">
+                        <div className="inline-block bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-lg">
+                          <p className="font-black text-[#005432] text-lg tracking-tight">Rp {product.price.toLocaleString('id-ID')}</p>
+                        </div>
                       </div>
                     </div>
+                    
+                    <div className="p-3 bg-gray-50/80 border-t border-gray-100 flex gap-2">
+                      <button onClick={() => handleAddToCartClick(product)} disabled={!isShiftActive} className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${isShiftActive ? 'bg-[#005432] text-white hover:bg-green-900' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                        <Plus size={16} strokeWidth={3}/> Tambah
+                      </button>
+                      <button onClick={() => openDetailModal(product)} className="w-12 h-12 flex items-center justify-center bg-white text-gray-600 rounded-xl border border-gray-200 hover:bg-gray-50 hover:text-[#005432] transition-colors shadow-sm shrink-0">
+                        <FileText size={18} strokeWidth={2.5}/>
+                      </button>
+                    </div>
                   </div>
-                  
-                  <div className="p-3 bg-gray-50/80 border-t border-gray-100 flex gap-2">
-                    <button 
-                      onClick={() => addToCart(product)} 
-                      disabled={!isShiftActive}
-                      className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm
-                        ${isShiftActive ? 'bg-[#005432] text-white hover:bg-green-900 hover:shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                    >
-                      <Plus size={16} strokeWidth={3}/> Tambah
-                    </button>
-                    <button onClick={() => openDetailModal(product)} className="w-12 h-12 flex items-center justify-center bg-white text-gray-600 rounded-xl border border-gray-200 hover:bg-gray-50 hover:text-[#005432] transition-colors shadow-sm shrink-0">
-                      <FileText size={18} strokeWidth={2.5}/>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* AREA PAGINATION */}
+              <div className="flex items-center justify-center gap-4 mt-10 mb-4">
+                <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className={`flex items-center gap-1 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-100' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'}`}><ChevronLeft size={16} /> Sebelumnya</button>
+                <div className="bg-white border border-gray-200 px-5 py-2.5 rounded-xl shadow-sm"><span className="text-sm font-semibold text-gray-600">Halaman <span className="text-[#005432] font-black">{currentPage}</span> dari {lastPage || 1}</span></div>
+                <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, lastPage))} disabled={currentPage === lastPage || lastPage === 0} className={`flex items-center gap-1 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${currentPage === lastPage || lastPage === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-100' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'}`}>Selanjutnya <ChevronRight size={16} /></button>
+              </div>
             </div>
           )}
         </div>
@@ -288,16 +342,14 @@ const TransaksiKasir = () => {
               <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl mb-4">
                 <div className="flex justify-between items-center mb-1">
                   <p className="font-semibold text-gray-500 text-xs uppercase tracking-wider">Total Pembayaran</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase text-right">Termasuk Pajak <br/>Rp {totalPajak.toLocaleString('id-ID')}</p>
                 </div>
                 <h2 className="text-3xl font-black text-gray-900 mt-1">
                   Rp {totalPembayaran.toLocaleString('id-ID')}
                 </h2>
               </div>
               
-              <div className="flex gap-3 mb-3">
-                <button onClick={handleClearCartClick} disabled={cart.length === 0} className="flex-1 bg-white border border-gray-200 text-gray-500 py-2.5 rounded-xl font-bold text-xs hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all disabled:opacity-50 shadow-sm">Kosongkan</button>
-                <button disabled={cart.length === 0} className="flex-1 bg-white border border-gray-200 text-gray-500 py-2.5 rounded-xl font-bold text-xs hover:bg-orange-50 hover:text-orange-600 hover:border-orange-100 transition-all disabled:opacity-50 shadow-sm">Tahan Pesanan</button>
+              <div className="flex mb-3">
+                <button onClick={handleClearCartClick} disabled={cart.length === 0} className="w-full bg-white border border-gray-200 text-gray-500 py-3 rounded-xl font-bold text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all disabled:opacity-50 shadow-sm">Kosongkan Keranjang</button>
               </div>
               
               <button 
@@ -312,6 +364,30 @@ const TransaksiKasir = () => {
           </div>
         </div>
       </div>
+
+      {/* MODAL KONFIRMASI TAMBAH KE KERANJANG */}
+      {isConfirmAddOpen && productToAdd && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setIsConfirmAddOpen(false)}></div>
+          <div className="relative w-full max-w-xs bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-gray-100 p-6 text-center">
+            <div className="w-16 h-16 bg-green-50 text-[#005432] rounded-full flex items-center justify-center mx-auto mb-4 border border-green-100">
+              <ShoppingBag size={28} strokeWidth={2.5} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900 mb-2">Tambah Pesanan?</h2>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              Masukkan <b className="text-gray-800">{productToAdd.name}</b> ke dalam keranjang pesanan?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setIsConfirmAddOpen(false)} className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors">
+                Batal
+              </button>
+              <button onClick={executeAddToCart} className="flex-1 bg-[#005432] text-white py-3 rounded-xl font-bold text-sm hover:bg-green-900 transition-colors shadow-sm">
+                Ya, Tambah
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DETAIL MENU */}
       {isDetailModalOpen && selectedProduct && (
@@ -331,9 +407,8 @@ const TransaksiKasir = () => {
               
               <button 
                 onClick={() => { 
-                  addToCart(selectedProduct); 
                   setIsDetailModalOpen(false); 
-                  if (isShiftActive) showToast(`${selectedProduct.name} dimasukkan ke keranjang!`, "success");
+                  handleAddToCartClick(selectedProduct);
                 }} 
                 disabled={!isShiftActive}
                 className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm
